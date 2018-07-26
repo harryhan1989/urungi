@@ -31,6 +31,9 @@
                         filterPrompt: false,
                         filterTypeLabel:'equal',
                         format:ngModelItem.format,
+                        isCustom:ngModelItem.isCustom,
+                        expression:ngModelItem.expression,
+                        arguments:ngModelItem.arguments,
                         values:ngModelItem.values}">
                             <i class="fa fa-cube wst-main-color" ng-show="ngModelItem.elementType != 'number' && ngModelItem.elementType != 'count' && (!ngModelItem.defaultAggregation)" data-toggle="tooltip" data-placement="top" title="{{ngModelItem.elementLabel}} (Dimmension)"></i>
                             <i class="fa fa-reorder wst-main-color" ng-show="ngModelItem.elementType == 'number' || ngModelItem.elementType == 'count' || (ngModelItem.elementType == 'string' && ngModelItem.defaultAggregation)" data-toggle="tooltip" data-placement="top" title="{{ngModelItem.elementLabel}} (Metric)"></i>
@@ -57,6 +60,9 @@
                         filterTypeLabel:'equal',
                         format:ngModelItem.format,
                         values:ngModelItem.values,
+                        isCustom:ngModelItem.isCustom,
+                        expression:ngModelItem.expression,
+                        arguments:ngModelItem.arguments,
                         aggregation: ngModelItem.defaultAggregation}">
                             <i class="fa fa-cube wst-main-color" ng-show="ngModelItem.elementType != 'number' && ngModelItem.elementType != 'count' && (!ngModelItem.defaultAggregation)" data-toggle="tooltip" data-placement="top" title="{{ngModelItem.elementLabel}} (Dimmension)" ></i>
                             <i class="fa fa-reorder wst-main-color" ng-show="ngModelItem.elementType == 'number' || ngModelItem.elementType == 'count' || (ngModelItem.elementType == 'string' && ngModelItem.defaultAggregation)" data-toggle="tooltip" data-placement="top" title="{{ngModelItem.elementLabel}} (Metric)"></i>

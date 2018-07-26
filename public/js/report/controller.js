@@ -548,6 +548,8 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.onDropField = function (newItem, role, forbidAggregation) {
+        console.log(newItem);
+
         $scope.sql = undefined;
 
         if (role === 'order') {
@@ -627,6 +629,9 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
             filterTypeLabel: 'equal',
             format: ngModelItem.format,
             values: ngModelItem.values,
+            isCustom: ngModelItem.isCustom,
+            expression: ngModelItem.expression,
+            arguments: ngModelItem.arguments,
             aggregation: agg
         };
     };
