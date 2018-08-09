@@ -1,5 +1,5 @@
 /* global jsPlumb: false, $modal: false, bsLoadingOverlayService: false */
-app.controller('layerCtrl', function ($scope, $rootScope, connection, $routeParams, datasourceModel, uuid2, $timeout, PagerService, $window) {
+app.controller('layerCtrl', function ($scope, $rootScope, connection, $routeParams, datasourceModel, uuid2, $timeout, PagerService, $window, gettext) {
     $scope.layerModal = 'partials/layer/layerModal.html';
     $scope.datasetModal = 'partials/layer/datasetModal.html';
     $scope.sqlModal = 'partials/layer/sqlModal.html';
@@ -247,6 +247,8 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     $scope.save = function () {
         var theLayer = $scope._Layer;
 
+        $scope.calculateComponents();
+
         // clean up
 
         for (var collection in theLayer.params.schema) {
@@ -414,7 +416,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
         datasourceModel.getSqlQuerySchema($scope.selectedDts.id, $scope.temporarySQLCollection, function (result) {
             if (result.result === 1) {
                 for (const collection of result.items) {
-                    collection.collectionID = 'C' + $scope.newId();
+                    collection.collectionID = 'C' + $scope.newID();
                     collection.datasourceID = $scope.selectedDts.id;
 
                     for (const element of collection.elements) {
@@ -541,7 +543,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
 
         if (!found) {
             var join = {};
-            join.joinID = 'J' + $scope.newId();
+            join.joinID = 'J' + $scope.newID();
 
             for (var collection in $scope._Layer.params.schema) {
                 for (var element in $scope._Layer.params.schema[collection].elements) {
@@ -592,6 +594,71 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
             }
         }
     }
+
+    $scope.calculateComponents = function () {
+        /*
+        * The collections form a graph, and the joins are edges
+        * A query can only contain elements from a single connected component,
+        * otherwise it is impossible to join the collections
+        */
+
+        for (const i in $scope._Layer.params.schema) {
+            $scope._Layer.params.schema[i].component = { pointer: null, index: Number(i) };
+        }
+
+        function getRepresentative (c) {
+            if (c.pointer) {
+                return getRepresentative(c.pointer);
+            } else {
+                return c;
+            }
+        }
+
+        if (!$scope._Layer.params.joins) {
+            $scope._Layer.params.joins = [];
+        }
+
+        for (const join of $scope._Layer.params.joins) {
+            const c1 = $scope._Layer.params.schema.find(col => col.collectionID === join.sourceCollectionID);
+            const c2 = $scope._Layer.params.schema.find(col => col.collectionID === join.targetCollectionID);
+
+            const r1 = getRepresentative(c1.component);
+            const r2 = getRepresentative(c2.component);
+
+            r2.pointer = r1;
+        }
+
+        const cRef = {};
+
+        for (const collection of $scope._Layer.params.schema) {
+            collection.component = getRepresentative(collection.component).index;
+            cRef[collection.collectionID] = collection.component;
+        }
+
+        $scope.forAllElements(function (element) {
+            if (!element.isCustom) {
+                element.component = cRef[element.collectionID];
+            } else {
+                element.component = undefined;
+                for (const argument of element.arguments) {
+                    if (argument.isCustom) {
+                        continue;
+                    }
+                    const comp = cRef[argument.collectionID];
+                    if (element.component !== undefined && element.component !== comp) {
+                        element.component = -1;
+                        noty({
+                            text: gettext('One of the custom elements uses elements from tables which aren\'t joined. This custom elemnt cannot be fetched'),
+                            type: 'warning',
+                            timeout: 8000
+                        });
+                        return;
+                    }
+                    element.component = comp;
+                }
+            }
+        });
+    };
 
     var instance;
 
@@ -840,6 +907,8 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.createComposedElement = function () {
+        $scope.calculateComponents();
+
         var element = {};
 
         element.isCustom = true;
@@ -871,6 +940,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
         }
         $scope.modalElement.viewExpression += ('#' + element.elementID);
         $scope.modalElement.tempArguments.push(element);
+        $scope.modalElement.component = element.component;
     };
 
     $scope.validateCustomElement = function () {
@@ -882,6 +952,14 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     $scope.compileExpression = function () {
         const elements = $scope.modalElement.viewExpression.match(/#[a-z0-9]*/g);
 
+        if (!elements) {
+            $scope.modalElement.expression = $scope.modalElement.viewExpression;
+            $scope.modalElement.arguments = [];
+            return false;
+            // custom elements without arguments will break the GROUP BY clause. They're disabled for now.
+            // To enable them, we need to modify queryProcessor so it doesn't add them to group Keys
+        }
+
         for (const elementTag of elements) {
             if (!$scope.modalElement.tempArguments.find(arg => arg.elementID === elementTag.substring(1))) {
                 const matchedElement = $scope.findElement(elementTag.substring(1));
@@ -891,14 +969,12 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
             }
         }
 
-        if (!elements) {
-            $scope.modalElement.expression = $scope.modalElement.viewExpression;
-            return;
-        }
         const expressions = {};
+        if (!$scope.modalElement.component) { $scope.modalElement.component = $scope.modalElement.tempArguments[0].component; }
+
         var customArguments = [];
         for (const arg of $scope.modalElement.tempArguments) {
-            if (elements.indexOf('#' + arg.elementID) >= 0) {
+            if (elements.indexOf('#' + arg.elementID) >= 0 && arg.component === $scope.modalElement.component) {
                 customArguments.push(arg);
                 if (!arg.isCustom) {
                     expressions['#' + arg.elementID] = arg.elementID;
@@ -1523,6 +1599,20 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
                 }
                 if (el.elements) {
                     explore(el.elements);
+                }
+            }
+        }
+
+        explore($scope._Layer.objects);
+    };
+
+    $scope.forAllElements = function (f) {
+        function explore (elementList) {
+            for (const el of elementList) {
+                if (el.elements) {
+                    explore(el.elements);
+                } else {
+                    f(el);
                 }
             }
         }
