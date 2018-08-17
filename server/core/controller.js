@@ -36,6 +36,7 @@ function findAll (req, done) {
     var page = (req.query.page) ? req.query.page : 1;
     var find = {};
     var searchText = (req.query.search) ? req.query.search : false;
+    var filters = req.query.filters;
     var fields = {};
     var fieldsToGet = (req.query.fields) ? req.query.fields : false;
     if (req.query.page > 0) { var params = (req.query.page) ? {skip: (page - 1) * perPage, limit: perPage} : {}; }
@@ -102,15 +103,15 @@ function findAll (req, done) {
         searchFind = (findFields.length > 0) ? {$or: findFields} : {};
     }
 
-        if (filters) {
-            var filterObject = {};
-            for (const f in filters) {
-                filterObject[f] = new RegExp(filters[f], 'i');
-            }
-            mandatoryFilters.push(filterObject);
+    if (filters) {
+        var filterObject = {};
+        for (const f in filters) {
+            filterObject[f] = new RegExp(filters[f], 'i');
         }
+        mandatoryFilters.push(filterObject);
+    }
 
-        if (Object.keys(searchFind).length > 0) { mandatoryFilters.push(searchFind); }
+    if (Object.keys(searchFind).length > 0) { mandatoryFilters.push(searchFind); }
 
     if (mandatoryFilters.length > 0) { find = {$and: mandatoryFilters}; }
 
@@ -197,11 +198,38 @@ function create (req, done) {
         user_companyName: (req.isAuthenticated()) ? req.user.companyName : null
     });
 
-    this.model.create(data, function (err, item) {
+    const Model = this.model;
+
+    Model.find({_id: data._id}, function (err, item) {
         if (err) {
             done({result: 0, msg: 'A database error has occured : ' + String(err), error: err});
+            return;
+        }
+
+        if (item.length > 0) {
+            if (!item[0].nd_trash_deleted) {
+                done({result: 0, msg: 'Failed to create item : item already exists'});
+            } else {
+                Model.deleteOne({_id: data._id}, function (err, res) {
+                    if (err) {
+                        done({result: 0, msg: 'A database error has occured : ' + String(err), error: err});
+                        return;
+                    }
+                    next();
+                });
+            }
         } else {
-            done({result: 1, msg: 'Item created', item: item.toObject()});
+            next();
+        }
+
+        function next () {
+            Model.create(data, function (err, item) {
+                if (err) {
+                    done({result: 0, msg: 'A database error has occured : ' + String(err), error: err});
+                } else {
+                    done({result: 1, msg: 'Item created', item: item.toObject()});
+                }
+            });
         }
     });
 }
@@ -215,40 +243,11 @@ function update (req, done) {
     delete (data.id);
     delete (data._id);
 
-        const Model = this.model;
-
-        Model.find({_id: data._id}, function (err, item) {
-            if (err) {
-                done({result: 0, msg: 'A database error has occured : ' + String(err), error: err});
-                return;
-            }
-
-            if (item.length > 0) {
-                if (!item[0].nd_trash_deleted) {
-                    done({result: 0, msg: 'Failed to create item : item already exists'});
-                } else {
-                    Model.deleteOne({_id: data._id}, function (err, res) {
-                        if (err) {
-                            done({result: 0, msg: 'A database error has occured : ' + String(err), error: err});
-                            return;
-                        }
-                        next();
-                    });
-                }
-            } else {
-                next();
-            }
-
-            function next () {
-                Model.create(data, function (err, item) {
-                    if (err) {
-                        done({result: 0, msg: 'A database error has occured : ' + String(err), error: err});
-                    } else {
-                        done({result: 1, msg: 'Item created', item: item.toObject()});
-                    }
-                });
-            }
-        });
+    if (req.query.userid) {
+        data.user_id = (req.isAuthenticated()) ? req.user._id : null;
+    }
+    if (req.query.companyid) {
+        data.companyID = (req.isAuthenticated()) ? req.user.companyID : null;
     }
 
     var user = (req.isAuthenticated()) ? req.user.username : 'unsigned user';

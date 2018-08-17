@@ -78,6 +78,13 @@ exports.getSchemas = function (data, setresult) {
 
         var query = db.getSchemaQuery(newSchemas, newTables);
 
+        /*
+        *   SELECT table_schema, table_name, column_name, data_type
+        *   FROM information_schema.columns
+        *   WHERE table_schema in ( newSchemas )
+        *   AND table_name in ( newTables )
+        */
+
         db.query(query, function (err, result) {
             if (err) {
                 setresult({result: 0, msg: 'Error getting the element schemas : ' + err});
@@ -144,11 +151,15 @@ exports.getSqlQuerySchema = function (data, setresult) {
     });
 };
 
-function getSQLResultsSchema (collectionName, queryResults, sqlQuery, done) {
-    var collectionID = 'WST' + generateShortUID();
+function getSQLResultsSchema (collectionRef, queryResults, sqlQuery, done) {
+    var theCollection = {
+        collectionName: collectionRef.collectionName,
+        visible: true,
+        collectionLabel: collectionRef.collectionName,
+        isSQL: true,
+        sqlQuery: sqlQuery
+    };
 
-    collectionID = collectionID.replace(new RegExp('-', 'g'), '');
-    var theCollection = {collectionID: collectionID, collectionName: collectionName, visible: true, collectionLabel: collectionName, isSQL: true, sqlQuery: sqlQuery};
     theCollection.elements = [];
 
     for (var key in queryResults[0]) {
