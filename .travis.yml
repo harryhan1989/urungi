@@ -2,7 +2,7 @@ language: node_js
 node_js:
     - "lts/*"
 services:
-    - mongodb
+    - sql
 script:
     - npm test
     - ./node_modules/.bin/eslint .
