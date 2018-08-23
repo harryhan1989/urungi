@@ -234,5 +234,4 @@ describe('/api/data-sources', function () {
                 .to.equal('modified_name');
         });
     });
-
 });
