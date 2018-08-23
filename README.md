@@ -94,8 +94,9 @@ To run a single test suite:
 
     npm test test/file-name.js
 
-Some of the tests need a SQL database to connect to. Setup this database, then put all of the connection information in test/config.js
-If you do not want to setup the SQL test database, set 'disable' to true and the corresponding tests will be skipped.
+Some of the tests need a SQL database to connect to. Setup this database, then put all of the connection information in the sql_db field of your config file.
+To disable tests which require a sql database, set this field to false
+To run the tests on multiple databases (to test for all clients for example), set the field to an array of database config objects.
 
 ## License
 

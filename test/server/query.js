@@ -1,12 +1,11 @@
-const dbConfig = require('../config');
 const Knex = require('knex');
 
 const { app, encrypt, decrypt } = require('../common');
 
+const dbParameters = config.get('sql_db');
+
 const chai = require('chai');
 const expect = chai.expect;
-
-var agent = chai.request.agent(app);
 
 var DataSources = connection.model('DataSources');
 var Layers = connection.model('Layers');
@@ -19,22 +18,6 @@ const userInfo = {
     id: '5b7e6bc911485d03a6afe1c7',
     compID: 'COMPID'
 };
-
-var dbType;
-switch (dbConfig.client) {
-case 'mysql':
-    dbType = 'MySQL';
-    break;
-case 'pg':
-    dbType = 'POSTGRE';
-    break;
-case 'oracledb':
-    dbType = 'ORACLE';
-    break;
-case 'mssql':
-    dbType = 'MSSQL';
-    break;
-}
 
 const testData = [
     {
@@ -431,8 +414,6 @@ var dtsId;
 var simpleId;
 var complexId;
 
-const dbName = dbConfig.connection.database;
-
 const simpleLayer = {
     createdBy: userInfo.id,
     companyID: userInfo.compID,
@@ -448,11 +429,11 @@ const simpleLayer = {
                 joinID: 'Jjjaa',
                 joinType: 'default',
                 sourceCollectionID: 'Caaaa',
-                sourceCollectionName: dbName + '.gems',
+                sourceCollectionName: 'gems',
                 sourceElementID: 'eeaa',
                 sourceElementName: 'id',
                 targetCollectionID: 'Caaab',
-                targetCollectionName: dbName + '.weapons',
+                targetCollectionName: 'weapons',
                 targetElementID: 'eebc',
                 targetElementName: 'gemId',
             }
@@ -464,7 +445,7 @@ const simpleLayer = {
 
 for (const table of testData) {
     const collectionID = table.collectionID;
-    const collectionName = dbName + '.' + table.tableName;
+    const collectionName = table.tableName;
 
     simpleLayer.params.schema.push({
         collectionID,
@@ -487,9 +468,7 @@ for (const table of testData) {
 }
 
 const customQuery1 = 'SELECT name, id as gemId, colour FROM gems ORDER BY gemId';
-var cq1Data;
 const customQuery2 = 'SELECT characters.id, characters.name, isFusion, weapons.name as weapon, Title as song FROM ( SELECT * FROM (SELECT id, name, isFusion FROM gems) g UNION (SELECT id, name, isFusion FROM humans)) characters LEFT JOIN songs ON characters.id = songs.singerId LEFT JOIN weapons ON weapons.gemId = characters.id GROUP BY characters.id HAVING name != \'Jasper\' ORDER BY name';
-var cq2Data;
 
 const complexLayer = {
     createdBy: userInfo.id,
@@ -660,11 +639,11 @@ const complexLayer = {
                 joinID: 'Jjjba',
                 joinType: 'default',
                 sourceCollectionID: 'Caaab',
-                sourceCollectionName: dbName + '.weapons',
+                sourceCollectionName: 'weapons',
                 sourceElementID: 'eebc',
                 sourceElementName: 'gemId',
                 targetCollectionID: 'Caaaa',
-                targetCollectionName: dbName + '.gems',
+                targetCollectionName: 'gems',
                 targetElementID: 'eeaa',
                 targetElementName: 'id'
             },
@@ -672,11 +651,11 @@ const complexLayer = {
                 joinID: 'Jjjbb',
                 joinType: 'default',
                 sourceCollectionID: 'Caaaa',
-                sourceCollectionName: dbName + '.gems',
+                sourceCollectionName: 'gems',
                 sourceElementID: 'eeaa',
                 sourceElementName: 'id',
                 targetCollectionID: 'Caaad',
-                targetCollectionName: dbName + '.songs',
+                targetCollectionName: 'songs',
                 targetElementID: 'eedd',
                 targetElementName: 'singerId'
             },
@@ -684,11 +663,11 @@ const complexLayer = {
                 joinID: 'Jjjbc',
                 joinType: 'default',
                 sourceCollectionID: 'Caaac',
-                sourceCollectionName: dbName + '.episodes',
+                sourceCollectionName: 'episodes',
                 sourceElementID: 'eeca',
                 sourceElementName: 'id',
                 targetCollectionID: 'Caaad',
-                targetCollectionName: dbName + '.songs',
+                targetCollectionName: 'songs',
                 targetElementID: 'eedc',
                 targetElementName: 'episodeId'
             },
@@ -696,11 +675,11 @@ const complexLayer = {
                 joinID: 'Jjjbd',
                 joinType: 'default',
                 sourceCollectionID: 'Cuuab',
-                sourceCollectionName: dbName + '.rawsql',
+                sourceCollectionName: 'rawsql',
                 sourceElementID: 'eeve',
                 sourceElementName: 'song',
                 targetCollectionID: 'Caaad',
-                targetCollectionName: dbName + '.songs',
+                targetCollectionName: 'songs',
                 targetElementID: 'eedb',
                 targetElementName: 'Title'
             },
@@ -727,7 +706,7 @@ const complexLayer = {
 
 for (const table of testData) {
     const collectionID = table.collectionID;
-    const collectionName = dbName + '.' + table.tableName;
+    const collectionName = table.tableName;
 
     complexLayer.params.schema.push({
         collectionID,
@@ -762,7 +741,32 @@ function findElement (elementID, list, f) {
     }
 }
 
-const testSuite = function () {
+const generateTestSuite = (dbConfig) => function () {
+    var dbType;
+    switch (dbConfig.client) {
+    case 'mysql':
+        dbType = 'MySQL';
+        break;
+    case 'pg':
+        dbType = 'POSTGRE';
+        break;
+    case 'oracledb':
+        dbType = 'ORACLE';
+        break;
+    case 'mssql':
+        dbType = 'MSSQL';
+        break;
+    }
+
+    var cq1Data;
+    var cq2Data;
+
+    var agent;
+
+    before(async function () {
+        agent = chai.request.agent(app);
+    });
+
     after(async function () {
         await agent.close();
         for (const entry of entries) {
@@ -1026,7 +1030,7 @@ const testSuite = function () {
                 id: 'namefield',
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             const sourceData = testDataRef['gems'].tableData;
 
@@ -1065,7 +1069,7 @@ const testSuite = function () {
                 }
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             const sourceData = testDataRef['gems'].tableData.filter((item) => !item.isFusion)
                 .sort(compareOn(a => a.name.toLowerCase()));
@@ -1102,7 +1106,7 @@ const testSuite = function () {
                 sortType: 1
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             var sourceData = testDataRef['gems'].tableData.filter(() => true).sort(compareOn(a => a.colour)).reduce((acc, cur) => {
                 if (acc.length > 0 && cur.colour === acc[acc.length - 1].colour) {
@@ -1152,7 +1156,7 @@ const testSuite = function () {
                 sortType: -1
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             var sourceData = [];
 
@@ -1241,7 +1245,7 @@ const testSuite = function () {
                 sortType: 1
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             var sourceData = [];
 
@@ -1298,7 +1302,7 @@ const testSuite = function () {
                 }
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             const sourceData = testDataRef['episodes'].tableData
                 .filter((item) => (item.publishDate.getTime() !== (new Date(2014, 2, 24)).getTime()))
@@ -1339,7 +1343,7 @@ const testSuite = function () {
                 sortType: 1
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             const sourceData = [];
 
@@ -1368,9 +1372,6 @@ const testSuite = function () {
 
             expect(data).to.have.lengthOf(sourceData.length);
 
-            console.log(data);
-            console.log(sourceData);
-
             for (const i in data) {
                 expect(data[i].gemweapon).to.equal(sourceData[i].gemweapon);
                 expect(data[i].episodetitle).to.equal(sourceData[i].episodetitle);
@@ -1391,7 +1392,7 @@ const testSuite = function () {
                 elementID: 'eecb'
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             expect(data).to.have.lengthOf(5);
         });
@@ -1418,7 +1419,7 @@ const testSuite = function () {
                 elementID: 'eeab'
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             const sourceData = testDataRef['gems'].tableData.map((item) => ({ gemvalue: (item.id + 1), gemname: item.name }));
 
@@ -1474,7 +1475,7 @@ const testSuite = function () {
                 }
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             const sourceData = cq1Data.filter((item) => item.colour !== 'purple');
 
@@ -1531,7 +1532,7 @@ const testSuite = function () {
                 criterion: {}
             });
 
-            const data = await fetchData(query);
+            const data = await fetchData(agent, query);
 
             const sourceData = cq2Data.filter((item) => (item.weapon && item.song)).sort(compareOn(a => a.id));
 
@@ -1549,16 +1550,28 @@ const testSuite = function () {
     });
 };
 
-if (dbConfig.disable) {
-    describe('Queries and data access', async function () {
-        it('Query tests are disabled - setup a SQL test database to test queries');
-        agent.close();
-    });
-} else {
-    describe('Queries and data access', testSuite);
+var testCount = 0;
+
+if (dbParameters) {
+    if (Array.isArray(dbParameters)) {
+        for (const dbc of dbParameters) {
+            var info = 'Queries and data access for test database number ' + testCount + ' ( ' + dbc.client + ' database )';
+            describe(info, generateTestSuite(dbc));
+            testCount += 1;
+        }
+    } else {
+        describe('Queries and data access', generateTestSuite(dbParameters));
+        testCount += 1;
+    }
 }
 
-async function fetchData (query) {
+if (testCount === 0) {
+    describe('Queries and data access', async function () {
+        it('Query tests are disabled - setup a SQL test database to test queries');
+    });
+}
+
+async function fetchData (agent, query) {
     const params = encrypt({ query: query });
 
     const res = await agent.post('/api/reports/get-data').send(params);
