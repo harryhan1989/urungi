@@ -34,7 +34,7 @@ app.service('reportHtmlWidgets', function () {
             }
 
             var theBackgroundColor = '#68b828';
-            if (report.properties.backgroundColor) { theBackgroundColor = report.properties.backgroundColor; }
+            if (report.style.backgroundColor) { theBackgroundColor = report.style.backgroundColor; }
             var theFontColor = '#fff';
             if (report.properties.fontColor) { theFontColor = report.properties.fontColor; }
 

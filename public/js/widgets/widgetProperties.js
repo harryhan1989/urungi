@@ -90,7 +90,7 @@ app.directive('wstWidgetProperties', function ($compile, icons, c3Charts, $rootS
                         if (elementID[0] === 'REPORT' && $scope.dashboard) {
                             for (var i in $scope.dashboard.reports) {
                                 if ($scope.dashboard.reports[i].id === elementID[1]) {
-                                    $scope.dashboard.reports[i].properties.backgroundColor = $scope.backgroundColor;
+                                    $scope.dashboard.reports[i].style.backgroundColor = $scope.backgroundColor;
                                     break;
                                 }
                             }
@@ -106,25 +106,25 @@ app.directive('wstWidgetProperties', function ($compile, icons, c3Charts, $rootS
                 $scope.gettingElementProperties = true;
                 getElementProperties();
                 if ($scope.properties) {
-                    $scope.backgroundColor = $scope.properties.backgroundColor;
+                    $scope.backgroundColor = $scope.style.backgroundColor;
                     $scope.backgroundImage = $scope.properties.backgroundImage;
-                    $scope.height = $scope.properties.height;
+                    $scope.height = $scope.style.height;
                     $scope.hiddenIn = $scope.properties.hiddenIn;
-                    $scope.rowHeight = $scope.properties.rowHeight;
+                    $scope.rowHeight = $scope.style.rowHeight;
                     $scope.headerRowHeight = $scope.properties.headerRowHeight;
-                    $scope.headerBackgroundColor = $scope.properties.headerBackgroundColor;
-                    $scope.headerHeight = $scope.properties.headerHeight;
-                    $scope.height = $scope.properties.height;
-                    // $scope.headerBottomLineColor = $scope.properties.headerBottomLineColor;
-                    $scope.headerBottomLineWidth = $scope.properties.headerBottomLineWidth;
-                    $scope.rowBottomLineWidth = $scope.properties.rowBottomLineWidth;
-                    $scope.rowBorderColor = $scope.properties.rowBorderColor;
+                    $scope.headerBackgroundColor = $scope.style.headerBackgroundColor;
+                    $scope.headerHeight = $scope.style.headerHeight;
+                    $scope.height = $scope.style.height;
+                    // $scope.headerBottomLineColor = $scope.style.headerBottomLineColor;
+                    $scope.headerBottomLineWidth = $scope.style.headerBottomLineWidth;
+                    $scope.rowBottomLineWidth = $scope.style.rowBottomLineWidth;
+                    $scope.rowBorderColor = $scope.style.rowBorderColor;
                     $scope.columnLineWidth = $scope.properties.columnLineWidth;
                 }
                 $scope.gettingElementProperties = false;
             });
 
-            $scope.$watch('properties.headerBottomLineColor', function () {
+            $scope.$watch('style.headerBottomLineColor', function () {
                 if (!$scope.gettingElementProperties) { $scope.onChange(); }
             });
 
@@ -279,20 +279,20 @@ app.directive('wstWidgetProperties', function ($compile, icons, c3Charts, $rootS
             /*
                     if ($scope.properties)
                         {
-                            $scope.properties.backgroundColor = $scope.backgroundColor;
+                            $scope.style.backgroundColor = $scope.backgroundColor;
                             $scope.properties.backgroundImage = $scope.backgroundImage;
-                            $scope.properties.height = $scope.height;
+                            $scope.style.height = $scope.height;
                             $scope.properties.hiddenIn = $scope.hiddenIn;
-                            $scope.properties.rowHeight = $scope.rowHeight;
+                            $scope.style.rowHeight = $scope.rowHeight;
                             $scope.properties.headerRowHeight = $scope.headerRowHeight;
-                            $scope.properties.headerBackgroundColor = $scope.headerBackgroundColor;
-                            $scope.properties.headerHeight = $scope.headerHeight;
-                            $scope.properties.height = $scope.height;
-                            //$scope.properties.headerBottomLineColor = $scope.headerBottomLineColor;
+                            $scope.style.headerBackgroundColor = $scope.headerBackgroundColor;
+                            $scope.style.headerHeight = $scope.headerHeight;
+                            $scope.style.height = $scope.height;
+                            //$scope.style.headerBottomLineColor = $scope.headerBottomLineColor;
                             console.log('the header bottom line color',$scope.headerBottomLineColor);
-                            $scope.properties.headerBottomLineWidth = $scope.headerBottomLineWidth;
-                            $scope.properties.rowBottomLineWidth = $scope.rowBottomLineWidth;
-                            $scope.properties.rowBorderColor = $scope.rowBorderColor;
+                            $scope.style.headerBottomLineWidth = $scope.headerBottomLineWidth;
+                            $scope.style.rowBottomLineWidth = $scope.rowBottomLineWidth;
+                            $scope.style.rowBorderColor = $scope.rowBorderColor;
                             $scope.properties.columnLineWidth = $scope.columnLineWidth;
 
                         }

@@ -108,30 +108,41 @@ app.directive('ndPrompt', function (reportModel) {
             //     // checkForOnChange(filter);
             // };
 
-            $scope.$on('updateFilters', function () {
-                $scope.update();
-            });
+            $scope.$on('updateFilters', async function (event, args) {
+                const baseQuery = args.query;
 
-            $scope.update = function () {
-                if (!$scope.isPrompt) {
-                    if ($scope.filter.filterPrompt) {
-                        $scope.filter.filterValuesQuery = $scope.getQuery($scope.filter, $scope.index);
-                    } else {
-                        $scope.filterValuesQuery = $scope.getQuery($scope.filter, $scope.index);
+                const query = {
+                    layerID: baseQuery.layerID,
+                    columns: [],
+                    order: [],
+                    filters: []
+                };
+
+                for (const col of baseQuery.columns) {
+                    query.columns.push(col);
+                }
+                for (const col of baseQuery.order) {
+                    query.order.push(col);
+                }
+                for (const col of baseQuery.filters) {
+                    if (col.id !== $scope.filter.id) {
+                        query.filters.push(col);
                     }
                 }
-                $scope.loadFilterValues();
-            };
 
-            $scope.loadFilterValues = async function () {
-                var fQuery;
-                if ($scope.filter.filterPrompt) {
-                    fQuery = $scope.filter.filterValuesQuery;
-                } else {
-                    fQuery = $scope.filterValuesQuery;
-                }
+                var newColumn = {
+                    id: 'f',
+                    collectionID: $scope.filter.collectionID,
+                    datasourceID: $scope.filter.datasourceID,
+                    elementID: $scope.filter.elementID,
+                    elementName: $scope.filter.elementName,
+                    elementType: $scope.filter.elementType,
+                    layerID: $scope.filter.layerID
+                };
 
-                var result = await reportModel.fetchData(fQuery);
+                query.columns.push(newColumn);
+
+                const result = await reportModel.fetchData(query);
 
                 var possibleValues = new Set();
                 for (const item of result.data) {
@@ -139,7 +150,7 @@ app.directive('ndPrompt', function (reportModel) {
                 }
 
                 $scope.values = Array.from(possibleValues.values());
-            };
+            });
 
             $scope.selectFirstValue = function (selectedValue) {
                 $scope.criterion.text1 = selectedValue;

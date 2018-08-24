@@ -22,8 +22,6 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     $scope.settingsTemplate = 'partials/widgets/common.html';
     $scope.tabs = {selected: 'elements'};
 
-    $scope.selectedReport = {};
-
     $scope.duplicateOptions = {};
     $scope.duplicateOptions.freeze = false;
     $scope.duplicateOptions.header = 'Duplicate report';
@@ -47,7 +45,6 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     $scope.showSQL = false;
 
     $scope.rows = [];
-    $scope.selectedReport.selectedLayerID = undefined;
     $scope.layers = [];
     $scope.mode = 'preview';
     $scope.isForDash = false;
@@ -75,8 +72,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.initReportView = async function () {
-        $scope.selectedReport = await reportModel.getReportDefinition($routeParams.reportID, false);
-        $scope.initForm();
+        $scope.selectedReport = await reportModel.getReport($routeParams.reportID, false);
         $scope.initPrompts();
         $scope.$digest();
         $scope.repaintWithPrompts();
@@ -93,14 +89,15 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         await $scope.initLayers();
 
         if (/reports\/new/.test($location.path())) {
-            $scope.mode = 'new';
-            $scope.newForm();
+            $scope.mode = 'add';
+            $scope.selectedReport = new reportModel.Report(false, $scope.layers[0]._id);
         } else if (/explore/.test($location.path())) {
             $scope.mode = 'explore';
-            $scope.newForm();
+            $scope.selectedReport = new reportModel.Report(false, $scope.layers[0]._id);
         } else {
-            $scope.selectedReport = await reportModel.getReportDefinition($routeParams.reportID, false);
-            $scope.initForm();
+            $scope.selectedReport = await reportModel.getReport($routeParams.reportID, false);
+            var layer = $scope.layers.find(l => l._id === $scope.selectedReport.selectedLayerID);
+            $scope.rootItem = layer.rootItem;
             $scope.mode = 'edit';
         }
 
@@ -133,86 +130,8 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         $scope.rootItem = $scope.layers[0].rootItem;
     };
 
-    $scope.newForm = function () {
-        $scope.selectedReport = {};
-
-        $scope.selectedReport.draft = true;
-        $scope.selectedReport.badgeStatus = 0;
-        $scope.selectedReport.exportable = true;
-        $scope.selectedReport.badgeMode = 1;
-
-        $scope.selectedReport.selectedLayerID = $scope.layers[0]._id;
-
-        $scope.selectedReport.properties = {};
-        $scope.selectedReport.properties.xkeys = [];
-        $scope.selectedReport.properties.ykeys = [];
-        $scope.selectedReport.properties.columns = [];
-        $scope.selectedReport.properties.order = [];
-        $scope.selectedReport.properties.pivotKeys = {};
-        $scope.selectedReport.properties.pivotKeys.columns = [];
-        $scope.selectedReport.properties.pivotKeys.rows = [];
-        $scope.selectedReport.properties.order = [];
-        $scope.selectedReport.properties.filters = [];
-        $scope.selectedReport.reportType = 'grid';
-
-        $scope.selectedReport.properties.backgroundColor = '#FFFFFF';
-        $scope.selectedReport.properties.height = 400;
-        $scope.selectedReport.properties.headerHeight = 60;
-        $scope.selectedReport.properties.rowHeight = 35;
-        $scope.selectedReport.properties.headerBackgroundColor = '#FFFFFF';
-        $scope.selectedReport.properties.headerBottomLineWidth = 4;
-        $scope.selectedReport.properties.headerBottomLineColor = '#999999';
-        $scope.selectedReport.properties.rowBorderColor = '#CCCCCC';
-        $scope.selectedReport.properties.rowBottomLineWidth = 2;
-        $scope.selectedReport.properties.columnLineWidht = 0;
-
-        $scope.selectedReport.reportType = 'grid';
-        $scope.mode = 'add';
-    };
-
-    $scope.initForm = async function () {
-        $scope.mode = 'edit';
-        $scope.cleanForm();
-        var layer = $scope.layers.find(l => l._id === $scope.selectedReport.selectedLayerID);
-        $scope.rootItem = layer.rootItem;
-    };
-
-    $scope.cleanForm = function () {
-        const report = $scope.selectedReport;
-
-        if (!report.properties) {
-            noty({text: 'invalid report', timeout: 2000, type: 'error'});
-            return;
-        }
-
-        if (!report.properties.xkeys) { report.properties.xkeys = []; }
-        if (!report.properties.ykeys) { report.properties.ykeys = []; }
-        if (!report.properties.columns) { report.properties.columns = []; }
-        if (!report.properties.order) { report.properties.order = []; }
-        if (!report.properties.filters) { report.properties.filters = []; }
-        if (!report.properties.pivotKeys) { report.properties.pivotKeys = {}; }
-        if (!report.properties.pivotKeys.columns) { report.properties.pivotKeys.columns = []; }
-        if (!report.properties.pivotKeys.rows) { report.properties.pivotKeys.rows = []; }
-        if (!report.properties.order) { report.properties.order = []; }
-    };
-
-    $scope.getReports = async function (params) {
-        /*
-        * The possbile fields in params are
-        * fields
-        * page
-        * search
-        * sort (a column to sort by)
-        * sortType (1 or -1)
-        */
-
-        if (!params) {
-            params = {};
-        }
-
-        if (!params.fields) {
-            params.fields = ['reportName', 'reportType', 'isPublic', 'owner', 'reportDescription', 'author', 'createdOn'];
-        }
+    $scope.getReports = async function (page, search, fields) {
+        var params = {};
 
         if (!params.page) {
             params.page = $scope.navigation.page || 1;
@@ -354,7 +273,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.reportNameSave = async function () {
-        $scope.selectedReport.query = $scope.generateQuery();
+        $scope.selectedReport.generateQuery();
 
         await reportModel.saveAsReport($scope.selectedReport, $scope.mode);
 
@@ -418,7 +337,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     */
 
     $scope.refresh = async function () {
-        $scope.selectedReport.query = $scope.generateQuery();
+        $scope.selectedReport.generateQuery();
 
         if (['chart-line', 'chart-donut', 'chart-pie', 'gauge'].indexOf($scope.selectedReport.reportType) >= 0) {
             reportModel.initChart($scope.selectedReport);
@@ -428,9 +347,6 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
             mode: $scope.mode,
             selectedRecordLimit: $scope.selectedRecordLimit.value
         };
-
-        $scope.$broadcast('updateFilters');
-        $scope.$broadcast('showLoadingMessage', 'Fetching data ...');
 
         const result = await reportModel.fetchData($scope.selectedReport.query, params);
 
@@ -444,88 +360,8 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         $scope.$broadcast('repaint', { fetchData: false });
 
         $scope.$digest();
-    };
 
-    $scope.generateQuery = function () {
-        var query = {};
-
-        query.columns = [];
-        const prop = $scope.selectedReport.properties;
-        for (const columnList of [
-            prop.columns,
-            prop.xkeys,
-            prop.ykeys,
-            prop.pivotKeys.columns,
-            prop.pivotKeys.rows
-        ]) {
-            for (const c of columnList) {
-                query.columns.push(c);
-            }
-        }
-
-        query.order = [];
-        for (const o of prop.order) {
-            query.order.push(o);
-        }
-
-        query.filters = [];
-        for (const f of prop.filters) {
-            query.filters.push(f);
-        }
-
-        if ($scope.selectedReport.reportType === 'pivot') {
-            for (const c in prop.ykeys) {
-                query.columns.push(countColumn(c));
-            }
-        }
-
-        function countColumn (col) {
-            return {
-                aggregation: 'count',
-                collectionID: col.collectionID,
-                datasourceID: col.datasourceID,
-                elementID: col.elementID,
-                elementLabel: col.elementLabel,
-                elementName: col.elementName,
-                elementType: col.elementName,
-                filterPrompt: false,
-                id: col.id + 'ptc',
-                layerID: col.layerID,
-                objectLabel: col.objectLabel + ' count'
-            };
-        }
-
-        if (prop.recordLimit) {
-            query.recordLimit = prop.recordLimit;
-        }
-
-        query.layerID = $scope.selectedReport.selectedLayerID;
-
-        return query;
-    };
-
-    $scope.getQueryForFilter = function (filter, filterIndex) {
-        const query = $scope.generateQuery();
-
-        query.filters.splice(filterIndex, 1);
-
-        for (var fil of query.filters) {
-            delete fil.filterValuesQuery;
-        }
-
-        var newColumn = {
-            id: 'f',
-            collectionID: filter.collectionID,
-            datasourceID: filter.datasourceID,
-            elementID: filter.elementID,
-            elementName: filter.elementName,
-            elementType: filter.elementType,
-            layerID: filter.layerID
-        };
-
-        query.columns.push(newColumn);
-
-        return query;
+        $scope.$broadcast('updateFilters', {query: $scope.selectedReport.query});
     };
 
     $scope.onDropOnFilter = function (data, event, type, group) {
@@ -542,13 +378,20 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         }
         $scope.selectedReport.properties.filters.push(item);
         $scope.onDropField(item, 'filter');
+
+        $scope.selectedReport.generateQuery();
+        $scope.$broadcast('updateFilters', {query: $scope.selectedReport.query});
     };
 
     $scope.onDropField = function (newItem, role, forbidAggregation) {
         $scope.sql = undefined;
 
         if (role === 'order') {
-            newItem.sortType = 1;
+            reportModel.toOrder(newItem);
+        }
+
+        if (role === 'filter') {
+            reportModel.toFilter(newItem);
         }
 
         if (newItem.aggregation && forbidAggregation) {
@@ -595,126 +438,16 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         }
     };
 
-    $scope.toReportItem = function (ngModelItem) {
-        var agg;
-        var aggLabel = '';
-
-        if (ngModelItem.aggregation) {
-            agg = ngModelItem.aggregation;
-            aggLabel = ' (' + ngModelItem.aggregation + ')';
-        }
-
-        if (ngModelItem.defaultAggregation) {
-            agg = ngModelItem.defaultAggregation;
-            aggLabel = ' (' + ngModelItem.defaultAggregation + ')';
-        }
-
-        return {
-            elementName: ngModelItem.elementName,
-            objectLabel: ngModelItem.elementLabel + aggLabel,
-            datasourceID: ngModelItem.datasourceID,
-            id: ngModelItem.id,
-            elementLabel: ngModelItem.elementLabel,
-            collectionID: ngModelItem.collectionID,
-            elementID: ngModelItem.elementID,
-            elementType: ngModelItem.elementType,
-            layerID: $scope.selectedReport.selectedLayerID,
-            filterType: 'equal',
-            filterPrompt: false,
-            filterTypeLabel: 'equal',
-            format: ngModelItem.format,
-            values: ngModelItem.values,
-            isCustom: ngModelItem.isCustom,
-            expression: ngModelItem.expression,
-            arguments: ngModelItem.arguments,
-            component: ngModelItem.component,
-            aggregation: agg
-        };
+    $scope.toColumnObject = function (ngModelItem) {
+        return new reportModel.Column(ngModelItem);
     };
 
     $scope.autoChooseArea = function (item, chooseColumn) {
-        var choice;
-
-        switch ($scope.selectedReport.reportType) {
-        case 'grid':
-        case 'vertical-grid':
-            choice = {
-                propertyBind: $scope.selectedReport.properties.columns,
-                zone: 'columns',
-                role: 'column'
-            };
-            break;
-
-        case 'pivot':
-            if ($scope.selectedReport.properties.pivotKeys.rows.length === 0) {
-                choice = {
-                    propertyBind: $scope.selectedReport.properties.pivotKeys.rows,
-                    zone: 'prow',
-                    role: 'column',
-                    forbidAggregation: true
-                };
-            } else {
-                if ($scope.selectedReport.properties.pivotKeys.columns.length === 0) {
-                    choice = {
-                        propertyBind: $scope.selectedReport.properties.pivotKeys.columns,
-                        zone: 'pcol',
-                        role: 'column',
-                        forbidAggregation: true
-                    };
-                } else {
-                    choice = {
-                        propertyBind: $scope.selectedReport.properties.ykeys,
-                        zone: 'ykeys',
-                        role: 'column'
-                    };
-                }
-            }
-            break;
-
-        case 'chart-bar':
-        case 'chart-line':
-        case 'chart-area':
-        case 'chart-pie':
-        case 'chart-donut':
-            if ($scope.selectedReport.properties.xkeys.length === 0) {
-                choice = {
-                    propertyBind: $scope.selectedReport.properties.xkeys,
-                    zone: 'xkeys',
-                    role: 'column'
-                };
-            } else {
-                if ($scope.selectedReport.properties.ykeys.length === 0 || $scope.selectedReport.properties.order.length > 0 || chooseColumn) {
-                    choice = {
-                        propertyBind: $scope.selectedReport.properties.ykeys,
-                        zone: 'ykeys',
-                        role: 'column'
-                    };
-                } else {
-                    choice = {
-                        propertyBind: $scope.selectedReport.properties.order,
-                        zone: 'order',
-                        role: 'order'
-                    };
-                }
-            }
-            break;
-
-        case 'indicator':
-        case 'vectorMap':
-        case 'gauge':
-            choice = {
-                propertyBind: $scope.selectedReport.properties.ykeys,
-                zone: 'ykeys',
-                role: 'column'
-            };
-            break;
-        }
-
-        return choice;
+        return $scope.selectedReport.autoChooseArea(item, chooseColumn);
     };
 
     $scope.autoFill = function (ngModelItem) {
-        const newItem = $scope.toReportItem(ngModelItem);
+        const newItem = $scope.toColumnObject(ngModelItem);
         var choice = $scope.autoChooseArea(newItem);
         newItem.zone = choice.zone;
 
@@ -758,132 +491,12 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.changeReportType = function (newReportType) {
-        $scope.selectedReport.query.countYKeys = false;
         $scope.$broadcast('clearReport');
-
-        var movedColumns = [];
-
-        function moveContent (a, b) {
-            b.push.apply(b, a.splice(0));
-        }
-
-        const report = $scope.selectedReport;
-        switch (newReportType) {
-        case 'grid':
-            report.reportType = 'grid';
-            moveContent(report.properties.xkeys, movedColumns);
-            moveContent(report.properties.ykeys, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            break;
-
-        case 'vertical-grid':
-            report.reportType = 'vertical-grid';
-            moveContent(report.properties.xkeys, movedColumns);
-            moveContent(report.properties.ykeys, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            break;
-
-        case 'pivot':
-            moveContent(report.properties.xkeys, movedColumns);
-            moveContent(report.properties.columns, movedColumns);
-            report.query.countYKeys = true;
-            report.reportType = 'pivot';
-            break;
-
-        case 'chart-bar':
-            moveContent(report.properties.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            report.reportType = 'chart-bar';
-            break;
-
-        case 'chart-line':
-            moveContent(report.properties.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            report.reportType = 'chart-line';
-            break;
-
-        case 'chart-area':
-            moveContent(report.properties.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            report.reportType = 'chart-area';
-            break;
-
-        case 'chart-donut':
-            moveContent(report.properties.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            report.reportType = 'chart-donut';
-            break;
-
-        case 'indicator':
-            moveContent(report.properties.columns, movedColumns);
-            moveContent(report.properties.xkeys, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            report.reportType = 'indicator';
-            if (!report.properties.style) { report.properties.style = 'style1'; }
-            if (!report.properties.backgroundColor) { report.properties.backgroundColor = '#fff'; }
-            if (!report.properties.reportIcon) { report.properties.reportIcon = 'fa-bolt'; }
-            if (!report.properties.mainFontColor) { report.properties.mainFontColor = '#000000'; }
-            if (!report.properties.descFontColor) { report.properties.descFontColor = '#CCCCCC'; }
-            break;
-
-        case 'vectorMap':
-            moveContent(report.properties.columns, movedColumns);
-            moveContent(report.properties.xkeys, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            report.reportType = 'vectorMap';
-            break;
-
-        case 'gauge':
-            moveContent(report.properties.columns, movedColumns);
-            moveContent(report.properties.xkeys, movedColumns);
-            moveContent(report.properties.pivotKeys.columns, movedColumns);
-            moveContent(report.properties.pivotKeys.rows, movedColumns);
-            report.reportType = 'gauge';
-
-            if (!report.properties.lines) { report.properties.lines = 20; } // The number of lines to draw    12
-            if (!report.properties.angle) { report.properties.angle = 15; } // The length of each line
-            if (!report.properties.lineWidth) { report.properties.lineWidth = 44; } // The line thickness
-            if (!report.properties.pointerLength) { report.properties.pointerLength = 70; }
-            if (!report.properties.pointerStrokeWidth) { report.properties.pointerStrokeWidth = 35; }
-            if (!report.properties.pointerColor) { report.properties.pointerColor = '#000000'; }
-            if (!report.properties.limitMax) { report.properties.limitMax = 'false'; } // If true, the pointer will not go past the end of the gauge
-            if (!report.properties.colorStart) { report.properties.colorStart = '#6FADCF'; } // Colors
-            if (!report.properties.colorStop) { report.properties.colorStop = '#8FC0DA'; } // just experiment with them
-            if (!report.properties.strokeColor) { report.properties.strokeColor = '#E0E0E0'; } // to see which ones work best for you
-            if (!report.properties.generateGradient) { report.properties.generateGradient = true; }
-            if (!report.properties.minValue) { report.properties.minValue = 0; }
-            if (!report.properties.maxValue) { report.properties.maxValue = 100; }
-            if (!report.properties.animationSpeed) { report.properties.animationSpeed = 32; }
-            break;
-
-        default:
-            noty({ msg: 'report type does not exist', timeout: 2000, type: 'error' });
-            break;
-        }
-
-        // The columns in dropzones which become hidden are moved to new dropzones
-        // This ensures that there are no hidden columns in the query, which results in strange behaviour
-        for (const col of movedColumns) {
-            const choice = $scope.autoChooseArea(col, true);
-            col.zone = choice.zone;
-            // queryModel.updateColumnField(col, 'zone', choice.zone);
-            choice.propertyBind.push(col);
-            if (choice.forbidAggregation) {
-                $scope.aggregationChoosed(col, {name: 'Raw', value: 'raw'});
-            }
-        }
+        $scope.selectedReport.changeReportType(newReportType);
     };
 
     $scope.isUsable = function (item) {
-        return $scope.selectedReport.properties &&
+        return $scope.selectedReport &&
             item.component !== -1 &&
             ($scope.selectedReport.properties.connectedComponent === undefined || // connectedComponent can be 0, which is why we can't just test it's truthyness
             item.component === undefined ||
@@ -936,21 +549,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.aggregationChoosed = function (column, option) {
-        if (typeof column.originalLabel === 'undefined') {
-            column.originalLabel = column.elementLabel;
-        }
-
-        if (option.value === 'raw') {
-            delete (column.aggregation);
-            column.elementLabel = column.originalLabel;
-            column.objectLabel = column.originalLabel;
-            column.id = reportModel.changeColumnId(column.id, 'raw');
-        } else {
-            column.aggregation = option.value;
-            column.elementLabel = column.originalLabel + ' (' + option.name + ')';
-            column.objectLabel = column.originalLabel + ' (' + option.name + ')';
-            column.id = reportModel.changeColumnId(column.id, option.value);
-        }
+        reportModel.setAggregation(column, option);
     };
 
     $scope.hideColumn = function (column, hidden) {

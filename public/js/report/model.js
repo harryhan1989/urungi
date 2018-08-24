@@ -1,14 +1,375 @@
 /* global XLSX: false, Blob: false, datenum: false */
 
-app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2, FileSaver) {
-    this.getReportDefinition = async function (id, isLinked) {
-        const data = await connection.get('/api/reports/get-report/' + id, {id: id, mode: 'preview', linked: isLinked});
-        if (data.item) {
-            // report = data.item;
-            return data.item;
+app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2) {
+    /*
+    *   the report object
+    */
+
+    this.Report = function (data, layerID) {
+        if (data) {
+            this.draft = data.draft || true;
+            this.badgeStatus = data.badgeStatus || 0;
+            this.exportable = data.exportable || true;
+            this.badgeMode = data.badgeMode || 1;
+
+            this.selectedLayerID = data.selectedLayerID || layerID;
+            this.reportType = data.reportType || 'grid';
+
+            this.properties = {};
+            let prop;
+            if (data.properties) {
+                prop = data.properties;
+            } else {
+                prop = {};
+                noty({ text: 'Report properties not found', tmeout: 3500, type: 'warning' });
+            }
+
+            this.properties.xkeys = prop.xkeys || [];
+            this.properties.ykeys = prop.ykeys || [];
+            this.properties.columns = prop.columns || [];
+
+            this.properties.pivotKeys = {};
+            if (prop.pivotKeys) {
+                this.properties.pivotKeys.columns = prop.pivotKeys.columns || [];
+                this.properties.pivotKeys.rows = prop.pivotKeys.rows || [];
+            } else {
+                this.properties.pivotKeys.columns = [];
+                this.properties.pivotKeys.rows = [];
+            }
+
+            this.properties.order = prop.order || [];
+            this.properties.filters = prop.filter || [];
+
+            this.query = data.query || {};
+
+            let style;
+            if (data.style) {
+                style = data.style;
+            } else {
+                style = {};
+            }
+
+            this.style = {};
+
+            this.style.backgroundColor = style.backgroundColor || '#FFFFFF';
+            this.style.height = style.height || 400;
+            this.style.headerHeight = style.headerHeight || 60;
+            this.style.rowHeight = style.rowHeight || 35;
+            this.style.headerBackgroundColor = style.headerBackgroundColor || '#FFFFFF';
+            this.style.headerBottomLineWidth = style.headerBottomLineWidth || 4;
+            this.style.headerBottomLineColor = style.headerBottomLineColor || '#999999';
+            this.style.rowBorderColor = style.rowBorderColor || '#CCCCCC';
+            this.style.rowBottomLineWidth = style.rowBottomLineWidth || 2;
+            this.style.columnLineWidht = style.columnLineWidth || 0;
         } else {
-            return null;
+            this.draft = true;
+            this.badgeStatus = 0;
+            this.exportable = true;
+            this.badgeMode = 1;
+
+            this.selectedLayerID = layerID;
+
+            this.properties = {};
+
+            this.properties.xkeys = [];
+            this.properties.ykeys = [];
+            this.properties.columns = [];
+            this.properties.order = [];
+            this.properties.pivotKeys = {};
+            this.properties.pivotKeys.columns = [];
+            this.properties.pivotKeys.rows = [];
+            this.properties.order = [];
+            this.properties.filters = [];
+            this.reportType = 'grid';
+
+            this.style = {};
+
+            this.style.backgroundColor = '#FFFFFF';
+            this.style.height = 400;
+            this.style.headerHeight = 60;
+            this.style.rowHeight = 35;
+            this.style.headerBackgroundColor = '#FFFFFF';
+            this.style.headerBottomLineWidth = 4;
+            this.style.headerBottomLineColor = '#999999';
+            this.style.rowBorderColor = '#CCCCCC';
+            this.style.rowBottomLineWidth = 2;
+            this.style.columnLineWidht = 0;
         }
+    };
+
+    this.Report.prototype.generateQuery = function () {
+        const layerID = this.selectedLayerID;
+
+        var query = {
+            layerID: layerID,
+            columns: [],
+            order: [],
+            filters: [],
+        };
+
+        const prop = this.properties;
+        for (const columnList of [
+            prop.columns,
+            prop.xkeys,
+            prop.ykeys,
+            prop.pivotKeys.columns,
+            prop.pivotKeys.rows
+        ]) {
+            for (const c of columnList) {
+                query.columns.push(c);
+            }
+        }
+
+        for (const o of prop.order) {
+            query.order.push(o);
+        }
+
+        for (const f of prop.filters) {
+            query.filters.push(f);
+        }
+
+        if (this.reportType === 'pivot') {
+            for (const c in prop.ykeys) {
+                query.columns.push(countColumn(c));
+            }
+        }
+
+        function countColumn (col) {
+            return {
+                aggregation: 'count',
+                collectionID: col.collectionID,
+                datasourceID: col.datasourceID,
+                elementID: col.elementID,
+                elementLabel: col.elementLabel,
+                elementName: col.elementName,
+                elementType: col.elementName,
+                filterPrompt: false,
+                id: col.id + 'ptc',
+                layerID: col.layerID,
+                objectLabel: col.objectLabel + ' count'
+            };
+        }
+
+        if (prop.recordLimit) {
+            query.recordLimit = prop.recordLimit;
+        }
+
+        query.layerID = this.selectedLayerID;
+
+        this.query = query;
+    };
+
+    this.Report.prototype.changeReportType = function (newReportType) {
+        this.countYKeys = false;
+        var movedColumns = [];
+
+        function moveContent (a, b) {
+            b.push.apply(b, a.splice(0));
+        }
+
+        const report = this;
+        switch (newReportType) {
+        case 'grid':
+            report.reportType = 'grid';
+            moveContent(report.properties.xkeys, movedColumns);
+            moveContent(report.properties.ykeys, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            break;
+
+        case 'vertical-grid':
+            report.reportType = 'vertical-grid';
+            moveContent(report.properties.xkeys, movedColumns);
+            moveContent(report.properties.ykeys, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            break;
+
+        case 'pivot':
+            moveContent(report.properties.xkeys, movedColumns);
+            moveContent(report.properties.columns, movedColumns);
+            report.query.countYKeys = true;
+            report.reportType = 'pivot';
+            break;
+
+        case 'chart-bar':
+            moveContent(report.properties.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            report.reportType = 'chart-bar';
+            break;
+
+        case 'chart-line':
+            moveContent(report.properties.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            report.reportType = 'chart-line';
+            break;
+
+        case 'chart-area':
+            moveContent(report.properties.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            report.reportType = 'chart-area';
+            break;
+
+        case 'chart-donut':
+            moveContent(report.properties.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            report.reportType = 'chart-donut';
+            break;
+
+        case 'indicator':
+            moveContent(report.properties.columns, movedColumns);
+            moveContent(report.properties.xkeys, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            report.reportType = 'indicator';
+            if (!report.properties.style) { report.properties.style = 'style1'; }
+            if (!report.style.backgroundColor) { report.style.backgroundColor = '#fff'; }
+            if (!report.properties.reportIcon) { report.properties.reportIcon = 'fa-bolt'; }
+            if (!report.properties.mainFontColor) { report.properties.mainFontColor = '#000000'; }
+            if (!report.properties.descFontColor) { report.properties.descFontColor = '#CCCCCC'; }
+            break;
+
+        case 'vectorMap':
+            moveContent(report.properties.columns, movedColumns);
+            moveContent(report.properties.xkeys, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            report.reportType = 'vectorMap';
+            break;
+
+        case 'gauge':
+            moveContent(report.properties.columns, movedColumns);
+            moveContent(report.properties.xkeys, movedColumns);
+            moveContent(report.properties.pivotKeys.columns, movedColumns);
+            moveContent(report.properties.pivotKeys.rows, movedColumns);
+            report.reportType = 'gauge';
+
+            if (!report.properties.lines) { report.properties.lines = 20; } // The number of lines to draw    12
+            if (!report.properties.angle) { report.properties.angle = 15; } // The length of each line
+            if (!report.properties.lineWidth) { report.properties.lineWidth = 44; } // The line thickness
+            if (!report.properties.pointerLength) { report.properties.pointerLength = 70; }
+            if (!report.properties.pointerStrokeWidth) { report.properties.pointerStrokeWidth = 35; }
+            if (!report.properties.pointerColor) { report.properties.pointerColor = '#000000'; }
+            if (!report.properties.limitMax) { report.properties.limitMax = 'false'; } // If true, the pointer will not go past the end of the gauge
+            if (!report.properties.colorStart) { report.properties.colorStart = '#6FADCF'; } // Colors
+            if (!report.properties.colorStop) { report.properties.colorStop = '#8FC0DA'; } // just experiment with them
+            if (!report.properties.strokeColor) { report.properties.strokeColor = '#E0E0E0'; } // to see which ones work best for you
+            if (!report.properties.generateGradient) { report.properties.generateGradient = true; }
+            if (!report.properties.minValue) { report.properties.minValue = 0; }
+            if (!report.properties.maxValue) { report.properties.maxValue = 100; }
+            if (!report.properties.animationSpeed) { report.properties.animationSpeed = 32; }
+            break;
+
+        default:
+            noty({ msg: 'report type does not exist', timeout: 2000, type: 'error' });
+            break;
+        }
+
+        // The columns in dropzones which become hidden are moved to new dropzones
+        // This ensures that there are no hidden columns in the query, which results in strange behaviour
+        for (const col of movedColumns) {
+            const choice = this.autoChooseArea(col, true);
+            col.zone = choice.zone;
+            // queryModel.updateColumnField(col, 'zone', choice.zone);
+            choice.propertyBind.push(col);
+            if (choice.forbidAggregation) {
+                setAggregation(col, {name: 'Raw', value: 'raw'});
+            }
+        }
+    };
+
+    this.Report.prototype.autoChooseArea = function (item, chooseColumn) {
+        var choice;
+
+        switch (this.reportType) {
+        case 'grid':
+        case 'vertical-grid':
+            choice = {
+                propertyBind: this.properties.columns,
+                zone: 'columns',
+                role: 'column'
+            };
+            break;
+
+        case 'pivot':
+            if (this.properties.pivotKeys.rows.length === 0) {
+                choice = {
+                    propertyBind: this.properties.pivotKeys.rows,
+                    zone: 'prow',
+                    role: 'column',
+                    forbidAggregation: true
+                };
+            } else {
+                if (this.properties.pivotKeys.columns.length === 0) {
+                    choice = {
+                        propertyBind: this.properties.pivotKeys.columns,
+                        zone: 'pcol',
+                        role: 'column',
+                        forbidAggregation: true
+                    };
+                } else {
+                    choice = {
+                        propertyBind: this.properties.ykeys,
+                        zone: 'ykeys',
+                        role: 'column'
+                    };
+                }
+            }
+            break;
+
+        case 'chart-bar':
+        case 'chart-line':
+        case 'chart-area':
+        case 'chart-pie':
+        case 'chart-donut':
+            if (this.properties.xkeys.length === 0) {
+                choice = {
+                    propertyBind: this.properties.xkeys,
+                    zone: 'xkeys',
+                    role: 'column'
+                };
+            } else {
+                if (this.properties.ykeys.length === 0 || this.properties.order.length > 0 || chooseColumn) {
+                    choice = {
+                        propertyBind: this.properties.ykeys,
+                        zone: 'ykeys',
+                        role: 'column'
+                    };
+                } else {
+                    choice = {
+                        propertyBind: this.properties.order,
+                        zone: 'order',
+                        role: 'order'
+                    };
+                }
+            }
+            break;
+
+        case 'indicator':
+        case 'vectorMap':
+        case 'gauge':
+            choice = {
+                propertyBind: this.properties.ykeys,
+                zone: 'ykeys',
+                role: 'column'
+            };
+            break;
+        }
+
+        return choice;
+    };
+
+    /*
+    *   Controller getters and setters
+    */
+
+    this.getReport = async function (id, isLinked) {
+        const data = await connection.get('/api/reports/get-report/' + id, {id: id, mode: 'preview', linked: isLinked});
+        return new this.Report(data.item);
     };
 
     this.getLayers = async function () {
@@ -51,7 +412,7 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2,
             request.page = 1;
         }
 
-        request.query = clone(query);
+        request.query = query;
 
         if (!query.recordLimit && params.selectedRecordLimit) {
             request.query.recordLimit = params.selectedRecordLimit;
@@ -108,6 +469,26 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2,
             }
         }
     }
+
+    function setAggregation (column, option) {
+        if (typeof column.originalLabel === 'undefined') {
+            column.originalLabel = column.elementLabel;
+        }
+
+        if (option.value === 'raw') {
+            delete (column.aggregation);
+            column.elementLabel = column.originalLabel;
+            column.objectLabel = column.originalLabel;
+            column.id = changeColumnId(column.id, 'raw');
+        } else {
+            column.aggregation = option.value;
+            column.elementLabel = column.originalLabel + ' (' + option.name + ')';
+            column.objectLabel = column.originalLabel + ' (' + option.name + ')';
+            column.id = changeColumnId(column.id, option.value);
+        }
+    };
+
+    this.setAggregation = setAggregation;
 
     this.initChart = function (report) {
         var chart = {
@@ -171,9 +552,11 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2,
         return getColumnId(element);
     };
 
-    this.changeColumnId = function (oldId, newAggregation) {
+    function changeColumnId (oldId, newAggregation) {
         return oldId.substring(0, oldId.length - 3) + newAggregation.substring(0, 3);
     };
+
+    this.changeColumnId = changeColumnId;
 
     function getColumnId (element) {
         /*
@@ -202,6 +585,62 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2,
 
             if (element.elements) { calculateIdForAllElements(element.elements); }
         }
+    };
+
+    /*
+    *   The column object
+    */
+
+    /*
+    *   Columns objects represent an element getting fetched with a given aggregation in a given slot.
+    *
+    * Columns are passed around a lot, converted to JSON and used in draggable object data and in requests.
+    * As such, they should be simple javascript objects. No fundtions, no weird objects, just basic javascript data.
+    *
+    */
+
+    this.Column = function (element) {
+        var agg;
+        var aggLabel = '';
+
+        if (element.aggregation) {
+            agg = element.aggregation;
+            aggLabel = ' (' + element.aggregation + ')';
+        }
+
+        if (element.defaultAggregation) {
+            agg = element.defaultAggregation;
+            aggLabel = ' (' + element.defaultAggregation + ')';
+        }
+
+        this.elementName = element.elementName;
+        this.objectLabel = element.elementLabel + aggLabel;
+        this.id = element.id;
+        this.elementLabel = element.elementLabel;
+        this.collectionID = element.collectionID;
+        this.elementID = element.elementID;
+        this.elementType = element.elementType;
+        this.format = element.format;
+        this.isCustom = element.isCustom;
+        this.expression = element.expression;
+        this.arguments = element.arguments;
+        this.component = element.component;
+        this.aggregation = agg;
+
+        // The following fields shouldn't be necessary, but are kept to make sure nothing breaks
+        this.datasourceID = element.datasourceID;
+        this.layerID = element.layerID;
+    };
+
+    this.toOrder = function (column) {
+        column.sortType = 1;
+    };
+
+    this.toFilter = function (column) {
+        column.filterType = 'equal';
+        column.filterPrompt = false;
+        column.filterTypeLabel = 'equal';
+        column.values = [];
     };
 
     var selectedColumn;
@@ -251,17 +690,6 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2,
         report.query.order = [];
         report.query.order.push(theColumn);
     };
-
-    function clone (obj) {
-        if (!obj) { return obj; }
-        if (Object.getPrototypeOf(obj) === Date.prototype) { return new Date(obj); }
-        if (typeof obj !== 'object') { return obj; }
-        var copy = obj.constructor();
-        for (var attr in obj) {
-            if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr]);
-        }
-        return copy;
-    }
 
     this.saveAsReport = async function (report, mode) {
         // Cleaning up the report object

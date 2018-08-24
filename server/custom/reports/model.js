@@ -7,6 +7,7 @@ var ReportsSchema = new mongoose.Schema({
     reportDescription: {type: String},
     reportSubType: {type: String},
     properties: {type: Object},
+    style: {type: Object},
     query: {type: Object},
     owner: {type: String},
     createdBy: {type: String},
