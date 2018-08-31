@@ -3,7 +3,7 @@ exports.build = function (query) {
         var qb = knex;
 
         for (const column of query.columns) {
-            qb = qb.select(getRef(knex, column).as(column.id));
+            qb = qb.select(getRef(knex, column, column.id));
             // for example : SUM([column.elementID]) as [column.id]
         }
 
@@ -51,7 +51,7 @@ exports.build = function (query) {
     };
 };
 
-function getRef (knex, column) {
+function getRef (knex, column, as) {
     var name;
 
     if (column.isCustom) {
@@ -60,19 +60,23 @@ function getRef (knex, column) {
         name = column.elementID;
     }
 
+    let asText = '';
+    if (as) {
+        asText = ' AS ' + as;
+    }
+
     switch (column.aggregation) {
     case 'sum':
-        return knex.sum(name);
     case 'avg':
-        return knex.avg(name);
+        return knex.raw('AVG(' + name + ')' + asText);
     case 'min':
-        return knex.min(name);
+        return knex.raw('MIN(' + name + ')' + asText);
     case 'max':
-        return knex.max(name);
+        return knex.raw('MAX(' + name + ')' + asText);
     case 'count':
-        return knex.count(name);
+        return knex.raw('COUNT(' + name + ')' + asText);
     default:
-        return knex.ref(name);
+        return knex.ref(name).as(as);
     }
 }
 

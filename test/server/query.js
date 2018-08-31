@@ -289,13 +289,20 @@ const testData = [
                 elementID: 'eecc',
                 type: 'date',
                 elementType: 'date'
+            },
+            {
+                columnName: 'episodeNumber',
+                elementID: 'eecd',
+                type: 'integer',
+                elementType: 'number'
             }
         ],
         tableData: [
             {
                 'id': 'ijosd3-qs2dqo98k-qs',
                 'title': 'Laser Light Canon',
-                'publishDate': new Date(2013, 11, 4)
+                'publishDate': new Date(2013, 11, 4),
+                'episodeNumber': 1
             },
             {
                 'id': 'oudh7khs-54fdt12-s',
@@ -510,6 +517,10 @@ const complexLayer = {
         {
             elementRole: 'dimension',
             elementID: 'eeaa'
+        },
+        {
+            elementRole: 'dimension',
+            elementID: 'eecd'
         },
         {
             elementRole: 'folder',
@@ -1397,7 +1408,125 @@ const generateTestSuite = (dbConfig) => function () {
             expect(data).to.have.lengthOf(5);
         });
 
-        it('Should test several kinds of aggregation to make sure they all work');
+        it('Should test several kinds of aggregation to make sure they all work', async function () {
+            const query0 = {
+                layerID: complexId,
+                columns: [
+                    {
+                        elementID: 'eecb',
+                        id: 'title'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'episodenumbermin',
+                        aggregation: 'min'
+                    }
+                ],
+                order: [],
+                filters: []
+            };
+
+            await fetchData(agent, query0);
+
+            const query1 = {
+                layerID: complexId,
+                columns: [
+                    {
+                        elementID: 'eead',
+                        id: 'isfusion'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'episodenumbermin',
+                        aggregation: 'min'
+                    }
+                ],
+                order: [
+                    {
+                        elementID: 'eecd',
+                        aggregation: 'min'
+                    }
+                ],
+                filters: [
+                    {
+                        elementID: 'eecd',
+                        aggregation: 'max',
+                        filterType: 'greaterThan',
+                        criterion: {
+                            text1: '20'
+                        }
+                    }
+                ]
+            };
+
+            await fetchData(agent, query1);
+
+            const query2 = {
+                layerID: complexId,
+                columns: [
+                    {
+                        elementID: 'eecd',
+                        id: 'enmin',
+                        aggregation: 'min'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'enmax',
+                        aggregation: 'max'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'ensum',
+                        aggregation: 'sum'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'enavg',
+                        aggregation: 'avg'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'encnt',
+                        aggregation: 'count'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'enraw'
+                    }
+                ],
+                order: [
+                    {
+                        elementID: 'eecd',
+                        aggregation: 'min'
+                    },
+                    {
+                        elementID: 'eecd',
+                        aggregation: 'max'
+                    },
+                    {
+                        elementID: 'eecd',
+                        aggregation: 'sum'
+                    },
+                    {
+                        elementID: 'eecd',
+                        aggregation: 'avg'
+                    },
+                    {
+                        elementID: 'eecd',
+                        aggregation: 'count'
+                    },
+                    {
+                        elementID: 'eecd',
+                        id: 'enraw'
+                    }
+                ],
+                filters: []
+            };
+
+            await fetchData(agent, query2);
+
+            // TODO : generate the source data and verify the results
+        });
 
         it('Should test several filters to make sure they all work');
 
