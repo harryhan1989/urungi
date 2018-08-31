@@ -60,20 +60,23 @@ Db.prototype.getCollections = async function () {
         query = (knex) =>
             knex.select('table_schema', knex.ref('table_name').as('name'))
                 .from('information_schema.tables').as('tables_info')
-                .where('table_schema', '=', this.connection.database);
+                .where('table_schema', '=', this.connection.database)
+                .orderBy('table_name');
         break;
     case 'ORACLE':
         query = (knex) =>
             knex.select({
                 'table_schema': 'user',
                 'name': 'table_name'
-            }).from('user_tables');
+            }).from('user_tables')
+                .orderBy('table_name');
         break;
     case 'MSSQL':
         query = (knex) =>
             knex.select('table_schema', knex.ref('TABLE_NAME').as('name'))
                 .from('INFORMATION_SCHEMA.TABLES')
-                .where('TABLE_TYPE', '=', 'BASE TABLE');
+                .where('TABLE_TYPE', '=', 'BASE TABLE')
+                .orderBy('TABLE_NAME');
         break;
     }
 
