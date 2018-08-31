@@ -117,13 +117,16 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         $scope.mode = 'add';
         $scope.isForDash = true;
 
-        $scope.initLayers().then($scope.newForm);
+        $scope.initLayers().then(() => {
+            $scope.selectedReport = new reportModel.Report(false, $scope.layers[0]._id);
+        });
         console.log($scope.isForDash);
     });
 
     $scope.$on('loadReportStrucutureForDash', async function (event, args) {
         var report = args.report;
-        await $scope.initLayers;
+        console.log(report);
+        await $scope.initLayers();
 
         $scope.selectedReport = report;
         $scope.mode = 'edit';
@@ -216,7 +219,6 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
 
     $scope.changeLayer = function (selectedLayerID) {
         $scope.selectedReport.selectedLayerID = selectedLayerID;
-        $scope.selectedReport.query.selectedLayerID = selectedLayerID;
         var layer = $scope.layers.find(l => l._id === $scope.selectedReport.selectedLayerID);
         $scope.rootItem = layer.rootItem;
     };
@@ -273,11 +275,21 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         // the query is generated before saving the report
         // This way, the report in the database has a query object which is ready for use
 
-        await reportModel.saveAsReport($scope.selectedReport, $scope.mode);
+        if ($scope.isForDash) {
+            reportService.addReport($scope.selectedReport);
+            $scope.dismissModal('#theReportNameModal');
+            $scope.$emmit('closeEditor');
+        } else {
+            await reportModel.saveAsReport($scope.selectedReport, $scope.mode);
 
-        $scope.dismissModal('#theReportNameModal');
+            $scope.dismissModal('#theReportNameModal');
 
-        $scope.$apply(() => $location.path('/reports'));
+            $scope.$apply(() => $location.path('/reports'));
+        }
+    };
+
+    $scope.saveForDash = function () {
+        $scope.$emit('closeEditor', { updatedReport: $scope.selectedReport });
     };
 
     $scope.pushToDash = function () {

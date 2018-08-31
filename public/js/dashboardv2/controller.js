@@ -90,7 +90,7 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
 
     $scope.newReport = function () {
         $scope.reportInterface = true;
-        $scope.editingReport = null;
+        $scope.editingReportIndex = null;
         setTimeout(function () {
             $scope.$broadcast('newReportForDash', {});
         }, 200);
@@ -101,7 +101,7 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
     };
 
     $scope.nav.clickItem = async function (item) {
-        const report = await reportModel.getReportDefinition(item._id);
+        const report = await reportModel.getReport(item._id);
 
         if (report) {
             report.id = report._id;
@@ -330,30 +330,45 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
         $scope.reportInterface = false;
     };
 
-    $scope.saveReport4Dashboard = function (isMode) {
-        // first clean the results area for not to create a conflict with other elements with same ID
-        var el = document.getElementById('reportLayout');
-        angular.element(el).empty();
+    // $scope.saveReport4Dashboard = function (isMode) {
+    //     // first clean the results area for not to create a conflict with other elements with same ID
+    //     var el = document.getElementById('reportLayout');
+    //     angular.element(el).empty();
 
-        var qstructure = reportService.getReport();
+    //     var qstructure = reportService.getReport();
 
-        if ($scope.editingReport == null) {
-            qstructure.reportName = 'report_' + ($scope.selectedDashboard.reports.length + 1);
-            qstructure.id = uuid2.newguid();
-            $scope.selectedDashboard.reports.push(qstructure);
-        } else {
-            var updatedReport = angular.copy(qstructure);
-            $scope.selectedDashboard.reports.splice($scope.editingReportIndex, 1, updatedReport);
-            // reportModel.getReport(updatedReport, 'REPORT_' + qstructure.id, $scope.mode, function (sql) {});
-        }
-        $scope.reportInterface = false;
-        // getAllPageColumns();
-        $scope.initPrompts();
-    };
+    //     if ($scope.editingReport == null) {
+    // qstructure.reportName = 'report_' + ($scope.selectedDashboard.reports.length + 1);
+    // qstructure.id = uuid2.newguid();
+    //         $scope.selectedDashboard.reports.push(qstructure);
+    //     } else {
+    //         var updatedReport = angular.copy(qstructure);
+    //         $scope.selectedDashboard.reports.splice($scope.editingReportIndex, 1, updatedReport);
+    //         // reportModel.getReport(updatedReport, 'REPORT_' + qstructure.id, $scope.mode, function (sql) {});
+    //     }
+    //     $scope.reportInterface = false;
+    //     // getAllPageColumns();
+    //     $scope.initPrompts();
+    // };
 
-    $scope.$on('closeEditor', function (event) {
+    $scope.$on('closeEditor', function (event, args) {
         event.stopPropagation();
         $scope.reportInterface = false;
+
+        if (args.updatedReport) {
+            const uReport = args.updatedReport;
+            if ($scope.editingReportIndex) {
+                const formerReport = $scope.selectedDashboard.reports[$scope.editingReportIndex];
+                uReport.id = formerReport.id;
+                $scope.selectedDashboard.reports[$scope.editingReportIndex] = uReport;
+            } else {
+                uReport.reportName = 'report_' + ($scope.selectedDashboard.reports.length + 1);
+                uReport.id = uuid2.newguid();
+                $scope.selectedDashboard.reports.push(uReport);
+            }
+            repaintReports();
+        }
+
         $scope.initPrompts();
     });
 
@@ -378,19 +393,18 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
         }
     };
 
-    var reportBackup;
     $scope.loadReport = function (report) {
         $scope.reportInterface = true;
         $scope.editingReport = report.id;
-        // reportBackup = clone(report);
-        reportBackup = angular.copy(report);
+        var reportArgument = new reportModel.Report(report);
         for (var i in $scope.selectedDashboard.reports) {
             if ($scope.selectedDashboard.reports[i].id === report.id) {
-                // $scope.selectedDashboard.reports.splice(i,1);
                 $scope.editingReportIndex = i;
             }
         }
-        $scope.$broadcast('loadReportStrucutureForDash', {report: reportBackup});
+        setTimeout(() => {
+            $scope.$broadcast('loadReportStrucutureForDash', {report: reportArgument});
+        }, 200);
     };
 
     async function getDroppableObjectHtml (data, context) {
@@ -677,6 +691,7 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
             $('#dashboardNameModal').modal('show');
         } else {
             saveDashboard();
+            $location.path('/dashboards/list');
         }
     };
 

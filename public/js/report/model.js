@@ -9,6 +9,9 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2,
         * Pass no argument to create a new report object
         */
         if (data) {
+            this._id = data._id;
+            this.reportName = data.reportName || '';
+
             this.draft = data.draft || true;
             this.badgeStatus = data.badgeStatus || 0;
             this.exportable = data.exportable || true;
@@ -64,6 +67,8 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2,
             this.style.rowBottomLineWidth = style.rowBottomLineWidth || 2;
             this.style.columnLineWidht = style.columnLineWidth || 0;
         } else {
+            this.reportName = 'New report';
+
             this.draft = true;
             this.badgeStatus = 0;
             this.exportable = true;
