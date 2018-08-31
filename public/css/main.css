@@ -435,6 +435,11 @@ img.img-cirlce {
 
 }
 
+.btn-small {
+    line-height: 0.8;
+    border-radius: 5px;
+}
+
 .btn-xs.btn-round {
     width: 23px;
     height: 23px;

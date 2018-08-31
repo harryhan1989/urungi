@@ -1,5 +1,5 @@
 /* global jsPlumb: false, $modal: false, bsLoadingOverlayService: false */
-app.controller('layerCtrl', function ($scope, $rootScope, connection, $routeParams, datasourceModel, uuid2, $timeout, PagerService, $window, gettext) {
+app.controller('layerCtrl', function ($scope, $rootScope, $location, connection, $routeParams, datasourceModel, uuid2, $timeout, PagerService, $window, gettext) {
     $scope.layerModal = 'partials/layer/layerModal.html';
     $scope.datasetModal = 'partials/layer/datasetModal.html';
     $scope.sqlModal = 'partials/layer/sqlModal.html';
@@ -7,12 +7,15 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     $scope.statusInfoModal = 'partials/common/statusInfo.html';
     $scope.setupModal = 'partials/layer/setupModal.html';
     $scope.addAllModal = 'partials/layer/addAllModal.html';
+    $scope.discardChangesModal = 'partials/modals/discardChangesModal.html';
     $scope.ReadOnlyDataSourceSelector = false;
     $scope.items = [];
     $scope.pager = {};
     $scope.datasources = [];
     $scope.selectedDts = {};
     $scope.initiated = false;
+
+    $scope.hasChanges = false;
 
     $scope.elementTypes = [{name: 'object', value: 'object'},
         {name: 'string', value: 'string'},
@@ -245,6 +248,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.save = function () {
+        $scope.hasChanges = false;
         var theLayer = $scope._Layer;
 
         $scope.calculateComponents();
@@ -271,34 +275,10 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
         } else {
             connection.post('/api/layers/update/' + theLayer._id, theLayer, function (result) {
                 if (result.result === 1) {
-                    window.history.back();
+                    $scope.goBack();
                 }
             });
         }
-    };
-
-    $scope.getLayers = function (page, search, fields) {
-        var params = {};
-
-        params.page = (page) || 1;
-
-        if (search) {
-            $scope.search = search;
-        } else if (page === 1) {
-            $scope.search = '';
-        }
-        if ($scope.search) {
-            params.search = $scope.search;
-        }
-
-        if (fields) params.fields = fields;
-
-        connection.get('/api/layers/find-all', params, function (data) {
-            $scope.items = data.items;
-            $scope.page = data.page;
-            $scope.pages = data.pages;
-            $scope.pager = PagerService.GetPager($scope.items.length, data.page, 10, data.pages);
-        });
     };
 
     $scope.getDatasources = function () {
@@ -413,6 +393,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     */
 
     $scope.addSqlToLayer = function () {
+        $scope.hasChanges = true;
         datasourceModel.getSqlQuerySchema($scope.selectedDts.id, $scope.temporarySQLCollection, function (result) {
             if (result.result !== 1) {
                 $scope.errorToken = result;
@@ -456,6 +437,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.saveSQLChanges = function () {
+        $scope.hasChanges = true;
         datasourceModel.getSqlQuerySchema($scope.selectedDts.id, $scope.temporarySQLCollection, function (result) {
             if (result.result === 1 && result.items.length > 0) {
                 // The result is an array but I think it never holds more than one element.
@@ -502,6 +484,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.confirmSQLChanges = function () {
+        $scope.hasChanges = true;
         $scope.theSelectedElement.sqlQuery = $scope.newSQLCollection.sqlQuery;
 
         for (const el of $scope.newSQLCollection.elements) {
@@ -539,6 +522,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     function makeJoin (sourceID, targetID) {
+        $scope.hasChanges = true;
         if (!$scope._Layer.params.joins) { $scope._Layer.params.joins = []; }
 
         var found = false;
@@ -579,6 +563,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     }
 
     function deleteJoin (sourceID, targetID) {
+        $scope.hasChanges = true;
         if (!$scope._Layer.params.joins) { $scope._Layer.params.joins = []; }
 
         // First verify that the join does not exists
@@ -1030,6 +1015,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
 
     $scope.elementAdd = function (element) {
         $scope.modalElement = element;
+        $scope.hasChanges = true;
         $scope.elementEditing = false;
         $scope.tabbed_panel_active = 1;
         $('#elementModal').modal('show');
@@ -1051,6 +1037,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.allElementsAdded = function (collection) {
+        $scope.hasChanges = true;
         for (const el of collection.elements) {
             if (!el.elementRole) {
                 return false;
@@ -1073,10 +1060,10 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.saveElement = function () {
-        console.log($scope.modalElement);
         if ($scope.modalElement.isCustom && !$scope.compileExpression()) {
             return;
         }
+        $scope.hasChanges = true;
         if (!$scope.elementEditing) {
             if (!$scope._Layer.objects) { $scope._Layer.objects = []; }
 
@@ -1222,6 +1209,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
 
     $scope.addFolder = function () {
         var elementID = 'F' + $scope.newID();
+        $scope.hasChanges = true;
 
         var element = {};
         element.elementLabel = 'my folder';
@@ -1340,6 +1328,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.deleteCollection = function (collection) {
+        $scope.hasChanges = true;
         var theCollectionID = collection.collectionID;
 
         deleteAllCollectionJoins(theCollectionID);
@@ -1373,6 +1362,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     function deleteAllCollectionJoins (collectionID) {
+        $scope.hasChanges = true;
         var joinsToDelete = [];
 
         for (var o in $scope._Layer.params.schema) {
@@ -1529,6 +1519,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     }
 
     $scope.addDatasetToLayer = function (datasourceID, entity) {
+        $scope.hasChanges = true;
         if (typeof $scope.selectedDts.id === 'undefined' || $scope.selectedDts.id === datasourceID) {
             datasourceModel.getEntitiesSchema(datasourceID, entity, function (result) {
                 if (result.result !== 1) {
@@ -1571,6 +1562,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
     };
 
     $scope.deleteObject = function (object, objectType) {
+        $scope.hasChanges = true;
         if ($scope.selectedItem === 'join') {
             deleteJoin($scope.theSelectedElement.sourceElementID, $scope.theSelectedElement.targetElementID);
             unSelect();
@@ -1632,5 +1624,18 @@ app.controller('layerCtrl', function ($scope, $rootScope, connection, $routePara
         }
 
         explore($scope._Layer.objects);
+    };
+
+    $scope.goBack = function (confirm) {
+        if (confirm) {
+            $('.modal-backdrop').remove();
+            $('#discardChangesModal').modal('show');
+        }
+
+        if (!confirm && $scope.hasChanges) {
+            $('#discardChangesModal').modal('show');
+        } else {
+            $location.path('/layers');
+        }
     };
 });

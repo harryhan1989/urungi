@@ -11,6 +11,7 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
     $scope.filterWidget = 'partials/report/filterWidget.html';
     $scope.promptModal = 'partials/widgets/promptModal.html';
     $scope.reportImportModal = 'partials/dashboardv2/reportImportModal.html';
+    $scope.discardChangesModal = 'partials/modals/discardChangesModal.html';
 
     $scope.selectedDashboard = {reports: [], containers: [], prompts: []};
     $scope.lastElementID = 0;
@@ -50,6 +51,8 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
         }
     ];
 
+    $scope.hasChanges = false;
+
     $scope.textAlign = [
         {name: 'left', value: 'left'},
         {name: 'right', value: 'right'},
@@ -88,7 +91,9 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
     $scope.newReport = function () {
         $scope.reportInterface = true;
         $scope.editingReport = null;
-        $scope.$broadcast('newReportForDash', {});
+        setTimeout(function () {
+            $scope.$broadcast('newReportForDash', {});
+        }, 200);
     };
 
     $scope.importReport = function () {
@@ -346,6 +351,25 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
         $scope.initPrompts();
     };
 
+    $scope.$on('closeEditor', function (event) {
+        event.stopPropagation();
+        $scope.reportInterface = false;
+        $scope.initPrompts();
+    });
+
+    $scope.goBack = function (confirm) {
+        if (confirm) {
+            $('.modal-backdrop').remove();
+            $('#discardChangesModal').modal('show');
+        }
+
+        if (!confirm && $scope.hasChanges) {
+            $('#discardChangesModal').modal('show');
+        } else {
+            $location.path('/dashboards/list');
+        }
+    };
+
     $scope.getQuery = function (queryID) {
         for (var r in $scope.selectedDashboard.reports) {
             if ($scope.selectedDashboard.reports[r].query.id === queryID) {
@@ -457,6 +481,8 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
         // DROP OVER THE DASHBOARD PARENT DIV
 
         event.stopPropagation();
+        $scope.hasChanges = true;
+
         var customObjectData = data['json/custom-object'];
 
         var html = await getDroppableObjectHtml(customObjectData, {preferedSize: '1400'});
@@ -477,6 +503,8 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
         // DROP OVER AN HTML CONTAINER
 
         event.stopPropagation();
+        $scope.hasChanges = true;
+
         var customObjectData = data['json/custom-object'];
 
         const authorisedObjects = ['imageTextLarge', 'textImageLarge', 'report', 'queryFilter', 'image', 'video', 'paragraph', 'heading', 'pageHeader'];
@@ -653,11 +681,11 @@ app.controller('dashBoardv2Ctrl', function ($scope, $location, reportService, co
     };
 
     $scope.dashboardNameSave = function () {
+        $('.modal-backdrop').remove();
         $('#dashboardNameModal').modal('hide');
-        $('.modal-backdrop').hide();
         saveDashboard();
-        // $scope.mode = 'edit';
-        $scope.goBack();
+
+        $location.path('/dashboards/list');
     };
 
     function cleanAll (theContainer) {

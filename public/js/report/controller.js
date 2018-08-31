@@ -20,6 +20,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     $scope.dashListModal = 'partials/report/modals/dashboardListModal.html';
     $scope.filterPromptModal = 'partials/report/modals/filter-prompt-modal.html';
     $scope.settingsTemplate = 'partials/widgets/common.html';
+    $scope.discardChangesModal = 'partials/modals/discardChangesModal.html';
     $scope.tabs = {selected: 'elements'};
 
     $scope.duplicateOptions = {};
@@ -48,6 +49,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     $scope.layers = [];
     $scope.mode = 'preview';
     $scope.isForDash = false;
+    $scope.hasChanges = false;
 
     $scope.selectedRecordLimit = { value: 500 };
 
@@ -111,6 +113,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         $scope.isForDash = true;
 
         $scope.initLayers().then($scope.newForm);
+        console.log($scope.isForDash);
     });
 
     $scope.$on('loadReportStrucutureForDash', async function (event, args) {
@@ -178,6 +181,22 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
                 }
                 prompt.criterion = {};
                 $scope.prompts[prompt.id + prompt.filterType] = prompt;
+            }
+        }
+    };
+
+    $scope.goBack = function (confirm) {
+        if (confirm) {
+            $scope.dismissModal('#discardChangesModal');
+        }
+
+        if (!confirm && $scope.hasChanges) {
+            $('#discardChangesModal').modal('show');
+        } else {
+            if ($scope.isForDash) {
+                $scope.$emit('closeEditor');
+            } else {
+                $location.path('/reports');
             }
         }
     };
@@ -277,9 +296,9 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
 
         await reportModel.saveAsReport($scope.selectedReport, $scope.mode);
 
-        $('#theReportNameModal').modal('hide');
-        $('.modal-backdrop').hide();
-        $scope.goBack();
+        $scope.dismissModal('#theReportNameModal');
+
+        $scope.$apply(() => $location.path('/reports'));
     };
 
     $scope.pushToDash = function () {
@@ -292,13 +311,9 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.reportPushed2Dash = function (dashboardID) {
-        $('modal-backdrop').visible = false;
-        $('modal-backdrop').remove();
-        $('#dashListModal').modal('hide');
+        $scope.dismissModal('#dashListModal');
+
         reportService.addReport($scope.selectedReport);
-
-        console.log('/dashboards/push/' + dashboardID);
-
         $location.path('/dashboards/push/' + dashboardID);
     };
 
@@ -330,6 +345,17 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     $scope.confirmFilterModal = function () {
         $('#filterPromptsModal').modal('hide');
         $scope.selectedFilter.filterPrompt = !$scope.selectedFilter.filterPrompt;
+    };
+
+    $scope.dismissModal = function (modalId) {
+        /*
+        * Clears the modal backdrop instantly
+        * use this function if you want to leave the page after closing the modal
+        * If you don't, the modal animation won't have time to complete and you'll arrive at your destination with a greyed-out background
+        */
+
+        $('.modal-backdrop').remove();
+        $(modalId).modal('hide');
     };
 
     /*
@@ -385,6 +411,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
 
     $scope.onDropField = function (newItem, role, forbidAggregation) {
         $scope.sql = undefined;
+        $scope.hasChanges = true;
 
         if (role === 'order') {
             reportModel.toOrder(newItem);
@@ -414,6 +441,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
 
     $scope.onRemoveField = function (item, role) {
         $scope.sql = undefined;
+        $scope.hasChanges = true;
 
         var empty = true;
 
@@ -491,6 +519,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.changeReportType = function (newReportType) {
+        $scope.hasChanges = true;
         $scope.$broadcast('clearReport');
         $scope.selectedReport.changeReportType(newReportType);
     };
@@ -508,17 +537,20 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     $scope.chartSectorTypeOptions = c3Charts.chartSectorTypeOptions;
 
     $scope.changeChartColumnType = function (column, type) {
+        $scope.hasChanges = true;
         column.type = type;
         c3Charts.changeChartColumnType($scope.selectedReport.properties.chart, column);
     };
 
     $scope.changeChartSectorType = function (column, type) {
+        $scope.hasChanges = true;
         if (type === 'pie') { $scope.selectedReport.reportType = 'chart-pie'; }
         if (type === 'donut') { $scope.selectedReport.reportType = 'chart-donut'; }
         reportModel.repaintReport($scope.selectedReport, $scope.mode);
     };
 
     $scope.changeColumnStyle = function (columnIndex, hashedID) {
+        $scope.hasChanges = true;
         reportModel.changeColumnStyle($scope.selectedReport, columnIndex, hashedID);
         $scope.selectedColumn = reportModel.selectedColumn();
         $scope.selectedColumnHashedID = reportModel.selectedColumnHashedID();
@@ -526,6 +558,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.changeColumnSignals = function (columnIndex, hashedID) {
+        $scope.hasChanges = true;
         reportModel.changeColumnSignals($scope.selectedReport, columnIndex, hashedID);
         $scope.selectedColumn = reportModel.selectedColumn();
         $scope.selectedColumnHashedID = reportModel.selectedColumnHashedID();
@@ -549,6 +582,7 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.aggregationChoosed = function (column, option) {
+        $scope.hasChanges = true;
         reportModel.setAggregation(column, option);
     };
 

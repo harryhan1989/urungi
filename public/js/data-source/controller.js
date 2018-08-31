@@ -1,9 +1,12 @@
 /* global CryptoJS: false, ObjectId: false, jsPlumb: false */
 
-app.controller('dataSourceCtrl', function ($scope, connection, $routeParams, dataSourceNameModal, datasourceModel, $timeout, PagerService, $http, Constants, gettext) {
+app.controller('dataSourceCtrl', function ($scope, $location, connection, $routeParams, dataSourceNameModal, datasourceModel, $timeout, PagerService, $http, Constants, gettext) {
     $scope.activeForm = 'partials/data-source/source_wizard_index.html';
+    $scope.discardChangesModal = 'partials/modals/discardChangesModal.html';
     $scope.selectedCollections = [];
     $scope.pager = {};
+
+    $scope.hasChanges = false;
 
     if ($routeParams.extra === 'intro') {
         $timeout(function () { $scope.showIntro(); }, 1000);
@@ -155,6 +158,23 @@ app.controller('dataSourceCtrl', function ($scope, connection, $routeParams, dat
                 }
             });
         }
+    };
+
+    $scope.goBack = function (confirm) {
+        if (confirm) {
+            $('.modal-backdrop').remove();
+            $('#discardChangesModal').modal('show');
+        }
+
+        if (!confirm && $scope.hasChanges) {
+            $('#discardChangesModal').modal('show');
+        } else {
+            $location.path('/data-sources');
+        }
+    };
+
+    $scope.onChangeField = function () {
+        $scope.hasChanges = true;
     };
 
     $scope.upload = function (file) {

@@ -11,7 +11,7 @@
             </div>
             <div class="explorer-header-buttons">
                 <a ng-click="save()" class="btn btn-success pull-right" style="margin-left: 5px;margin-right: 5px;" translate>Save layer</a>
-                <a href="/#/layers" class="btn btn-default pull-right" translate>Cancel</a>
+                <a ng-click="goBack()" class="btn btn-default pull-right" translate>Back</a>
             </div>
         </div>
 
@@ -305,4 +305,5 @@
 <div ng-include src="elementModal"></div>
 <div ng-include src="sqlModal"></div>
 <div ng-include src="addAllModal"></div>
+<div ng-include src="discardChangesModal"></div>
 <!--<div ng-include src="setupModal"></div>-->

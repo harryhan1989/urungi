@@ -1,6 +1,6 @@
 <div class="container-fluid" class="branded-border-panel" >
     <a ng-click="save()" ng-disabled="(!_dataSource.type == 'BIGQUERY' && (!_dataSource.connection.host || !_dataSource.connection.port || !_dataSource.connection.database || testingConnection)) || (_dataSource.type == 'BIGQUERY' && (!_dataSource.connection.database) || testingConnection) " class="btn btn-success pull-right" style="margin-left: 5px;margin-right: 5px;">Save Datasource</a>
-    <a href="/#/data-sources" class="btn btn-default  pull-right" translate>Cancel</a>
+    <a ng-click="goBack()" class="btn btn-default  pull-right" translate>Back</a>
 </div>
 <div class="container-fluid">
 
@@ -10,7 +10,8 @@
         <div class="col-md-12">
             <div class="form-group">
                 <label class="control-label" translate>Connection Type II</label>
-                <select ng-model="_dataSource.type" placeholder="Select a datasource type..." id="type" class="form-control" ng-change="selectedRoleChanged = true">
+                <select ng-model="_dataSource.type" placeholder="Select a datasource type..." id="type" class="form-control" 
+                ng-change="onChangeField(); selectedRoleChanged = true">
                     <option label="MySQL" value="MySQL" translate>MySQL</option>
                     <option label="PostgreSql" value="POSTGRE" translate>PostgreSql</option>
                     <option label="MSSQL" value="MSSQL" translate>MSSQL</option>
@@ -23,21 +24,30 @@
         <div class="col-md-12">
             <div class="form-group">
                 <label class="control-label" for="name" translate>Name</label>
-                <input class="form-control" name="name" id="name" ng-model="_dataSource.name" data-validate="required" placeholder="Insert here the name for this connection" novalidate="novalidate" required="true" aria-describedby="full_name-error" aria-invalid="false"><span id="full_name-error" class="validate-has-error" style="display: none;"></span>
+                <input class="form-control" name="name" id="name" ng-model="_dataSource.name" data-validate="required" 
+                placeholder="Insert here the name for this connection" novalidate="novalidate" required="true" aria-describedby="full_name-error" 
+                aria-invalid="false" ng-change="onChangeField()">
+                <span id="full_name-error" class="validate-has-error" style="display: none;"></span>
             </div>
         </div>
 
         <div class="col-md-12" ng-if="_dataSource.type != 'BIGQUERY'">
             <div class="form-group">
                 <label class="control-label" for="host" translate>Host</label>
-                <input class="form-control" name="host" id="host" ng-model="_dataSource.connection.host" data-validate="required" placeholder="Insert here your Host address or IP" novalidate="novalidate" required="true" aria-describedby="full_name-error" aria-invalid="false"><span id="full_name-error" class="validate-has-error" style="display: none;"></span>
+                <input class="form-control" name="host" id="host" ng-model="_dataSource.connection.host" data-validate="required" 
+                placeholder="Insert here your Host address or IP" novalidate="novalidate" required="true" aria-describedby="full_name-error" 
+                aria-invalid="false" ng-change="onChangeField()">
+                <span id="full_name-error" class="validate-has-error" style="display: none;"></span>
             </div>
         </div>
 
         <div class="col-md-12"  ng-if="_dataSource.type != 'BIGQUERY'">
             <div class="form-group">
                 <label class="control-label" for="port" translate>Port</label>
-                <input class="form-control" name="port" id="port" ng-model="_dataSource.connection.port" data-validate="required" placeholder="Insert here the port to access the SQL instance" novalidate="novalidate" required="true" aria-describedby="full_name-error" aria-invalid="false"><span id="full_name-error" class="validate-has-error" style="display: none;"></span>
+                <input class="form-control" name="port" id="port" ng-model="_dataSource.connection.port" data-validate="required" 
+                placeholder="Insert here the port to access the SQL instance" novalidate="novalidate" required="true" aria-describedby="full_name-error" 
+                aria-invalid="false" ng-change="onChangeField()">
+                <span id="full_name-error" class="validate-has-error" style="display: none;"></span>
             </div>
         </div>
 
@@ -45,7 +55,10 @@
             <div class="form-group">
                 <label class="control-label" for="database" ng-if="_dataSource.type != 'BIGQUERY'" translate>Database</label>
                 <label class="control-label" for="database" ng-if="_dataSource.type == 'BIGQUERY'" translate>Project ID</label>
-                <input class="form-control" name="database" id="database" ng-model="_dataSource.connection.database" data-validate="required" placeholder="Set here the name of the SQL Database to connect" novalidate="novalidate" aria-required="true" aria-describedby="full_name-error" aria-invalid="false"><span id="full_name-error" class="validate-has-error" style="display: none;"></span>
+                <input class="form-control" name="database" id="database" ng-model="_dataSource.connection.database" data-validate="required"
+                placeholder="Set here the name of the SQL Database to connect" novalidate="novalidate" aria-required="true" 
+                aria-describedby="full_name-error" aria-invalid="false" ng-change="onChangeField()">
+                <span id="full_name-error" class="validate-has-error" style="display: none;"></span>
             </div>
         </div>
 
@@ -98,7 +111,7 @@
     </div>
 </div>
 
-
+<div ng-include src="discardChangesModal"></div>
 
 <div class="container-fluid" style="padding: 5px;">
 
@@ -155,8 +168,5 @@
 
 
     </div>
-
-
-
 
 </div>
