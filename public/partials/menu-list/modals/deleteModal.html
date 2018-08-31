@@ -1,10 +1,10 @@
 <nd-modal id="deleteModal">
     <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h3>{{modalOptions.headerText}}</h3>
+        <h3>{{nav.text.deleteHeader}}</h3>
     </div>
     <div class="modal-body">
-        <h4>{{modalOptions.bodyText}}</h4>
+        <h4>{{nav.text.deleteBody.replace('%name', deleteOptions.itemName)}}</h4>
         <br/>
         <br/>
             <div class="form-group">

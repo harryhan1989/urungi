@@ -133,7 +133,7 @@ app.controller('listCtrl', function ($scope, $rootScope, connection, PagerServic
         $scope.nav.text = {
             duplicateHeader: 'Duplicate this report',
             deleteHeader: 'Confirm delete report',
-            deleteBody: 'Are you sure you want to delete the report: '
+            deleteBody: 'Are you sure you want to delete the report "%name" ?'
         };
 
         $scope.nav.clickItem = function (item) {
@@ -320,17 +320,17 @@ app.controller('listCtrl', function ($scope, $rootScope, connection, PagerServic
             }
         ];
 
-        $scope.tooltips = {
+        $scope.nav.tooltips = {
             itemClick: 'View this dashboard',
             delete: 'Delete this dashboard',
             duplicate: 'Duplicate this dashboard',
             edit: 'Edit this dashboard'
         };
 
-        $scope.text = {
+        $scope.nav.text = {
             duplicateHeader: 'Duplicate this dashboard',
             deleteHeader: 'Confirm delete dashboard',
-            deleteBody: 'Are you sure you want to delete the dashboard: '
+            deleteBody: 'Are you sure you want to delete the dashboard "%name" ?'
         };
 
         $scope.duplicate = async function () {
@@ -457,6 +457,7 @@ app.controller('listCtrl', function ($scope, $rootScope, connection, PagerServic
     })
     .controller('layerListCtrl', function ($scope, $rootScope, $location, connection, gettext) {
         $scope.layerOptions = {};
+        $scope.deleteOptions = {};
 
         $scope.listView = '/partials/menu-list/list.html';
 
@@ -469,6 +470,7 @@ app.controller('listCtrl', function ($scope, $rootScope, connection, PagerServic
         $scope.nav.itemsPerPage = 10;
 
         $scope.nav.fetchFields = ['name', 'status', 'description', 'createdOn'];
+        $scope.nav.nameField = 'name';
 
         $scope.nav.infoFields = [
             {
@@ -484,14 +486,15 @@ app.controller('listCtrl', function ($scope, $rootScope, connection, PagerServic
             }
         ];
 
-        $scope.tooltips = {
-            itemClick: 'View this layer'
+        $scope.nav.tooltips = {
+            itemClick: 'View this layer',
+            delete: 'Delete this layer'
         };
 
-        $scope.text = {
+        $scope.nav.text = {
             duplicateHeader: 'Duplicate this layer',
             deleteHeader: 'Confirm delete layer',
-            deleteBody: 'Are you sure you want to delete the layer : '
+            deleteBody: 'Are you sure you want to delete the layer "%name" ? All reports and dashboards which use this layer will stop working'
         };
 
         $scope.newLayer = function () {
@@ -505,6 +508,12 @@ app.controller('listCtrl', function ($scope, $rootScope, connection, PagerServic
             await connection.post('/api/layers/create', data);
             $scope.nav.refreshItems();
             $('#layerModal').modal('hide');
+        };
+
+        $scope.delete = async function () {
+            await connection.post('/api/layers/delete', {id: $scope.deleteOptions.id});
+            $scope.nav.refreshItems();
+            $('#deleteModal').modal('hide');
         };
 
         $scope.nav.clickItem = function (item) {

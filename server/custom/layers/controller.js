@@ -29,6 +29,23 @@ exports.LayersUpdate = function (req, res) {
     });
 };
 
+exports.LayersDelete = function (req, res) {
+    var data = req.body;
+
+    req.query.trash = true;
+    req.query.companyid = true;
+
+    data._id = data.id;
+    data.nd_trash_deleted = true;
+    data.nd_trash_deleted_date = new Date();
+
+    req.body = data;
+
+    controller.remove(req, function (result) {
+        serverResponse(req, res, 200, result);
+    });
+};
+
 exports.LayersFindAll = function (req, res) {
     req.query.trash = true;
     req.query.companyid = true;

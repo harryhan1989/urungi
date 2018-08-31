@@ -30,30 +30,34 @@
 
         </a>
 
-        <span ng-if="nav.editButtons" class="col-md-2">
+        <span class="col-md-2">
+            <span ng-if="nav.editButtons || layerButtons">
+                <a class="pull-right list-button btn-delete" ng-click="viewDeleteModal(item)" 
+                tooltip="{{nav.tooltips.delete}}" tooltip-placement="bottom">
+                    <i class="fa fa-trash-o "  ></i>
+                </a>
+            </span>
 
-            <a class="pull-right list-button btn-delete" ng-click="viewDeleteModal(item)" 
-            tooltip="{{nav.tooltips.delete}}" tooltip-placement="bottom">
-                <i class="fa fa-trash-o "  ></i>
-            </a>
+            <span ng-if="nav.editButtons">
 
-            <a class="pull-right list-button btn-duplicate" ng-click="viewDuplicateModal(item)" 
-            tooltip="{{nav.tooltips.duplicate}}" tooltip-placement="bottom">
-                <i class="fas fa-copy" ></i>
-            </a>
+                <a class="pull-right list-button btn-duplicate" ng-click="viewDuplicateModal(item)" 
+                tooltip="{{nav.tooltips.duplicate}}" tooltip-placement="bottom">
+                    <i class="fas fa-copy" ></i>
+                </a>
 
-            <a class="pull-right list-button btn-edit" href="{{getEditLink(item)}}"  
-            tooltip="{{nav.tooltips.edit}}" tooltip-placement="bottom">
-                <i class="fa fa-pencil" ></i>
-            </a>
+                <a class="pull-right list-button btn-edit" href="{{getEditLink(item)}}"  
+                tooltip="{{nav.tooltips.edit}}" tooltip-placement="bottom">
+                    <i class="fa fa-pencil" ></i>
+                </a>
 
-            <span ng-if="item.isPublic" class="badge badge-success pull-right published-tag">published</span>    
-        </span>
+                <span ng-if="item.isPublic" class="badge badge-success pull-right published-tag">published</span>    
+            </span>
 
-        <span ng-if="layerButtons" class="col-md-2">
-                <a id="layerListItemStatus" class="badge pull-right"  ng-click="toggleActive(item)"
-                ng-class="{'badge-success': item.status == 'active', 'badge-danger': item.status == 'Not active'}" 
-                ng-click="changeLayerStatus(item)" tooltip="Click here to change the status of the layer" tooltip-placement="left">{{item.status}}</a>
+            <span ng-if="layerButtons">
+                    <a id="layerListItemStatus" class="badge pull-right"  ng-click="toggleActive(item)"
+                    ng-class="{'badge-success': item.status == 'active', 'badge-danger': item.status == 'Not active'}" 
+                    ng-click="changeLayerStatus(item)" tooltip="Click here to change the status of the layer" tooltip-placement="left">{{item.status}}</a>
+            </span>
         </span>
 
     </div>

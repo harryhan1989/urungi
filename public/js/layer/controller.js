@@ -10,7 +10,6 @@ app.controller('layerCtrl', function ($scope, $rootScope, $location, connection,
     $scope.discardChangesModal = 'partials/modals/discardChangesModal.html';
     $scope.ReadOnlyDataSourceSelector = false;
     $scope.items = [];
-    $scope.pager = {};
     $scope.datasources = [];
     $scope.selectedDts = {};
     $scope.initiated = false;
@@ -248,7 +247,6 @@ app.controller('layerCtrl', function ($scope, $rootScope, $location, connection,
     };
 
     $scope.save = function () {
-        $scope.hasChanges = false;
         var theLayer = $scope._Layer;
 
         $scope.calculateComponents();
@@ -275,6 +273,7 @@ app.controller('layerCtrl', function ($scope, $rootScope, $location, connection,
         } else {
             connection.post('/api/layers/update/' + theLayer._id, theLayer, function (result) {
                 if (result.result === 1) {
+                    $scope.hasChanges = false;
                     $scope.goBack();
                 }
             });
@@ -320,7 +319,6 @@ app.controller('layerCtrl', function ($scope, $rootScope, $location, connection,
         if ($scope._Layer.params && $scope._Layer.params.schema && $scope._Layer.params.schema.length > 0) {
             $scope.selectedDts.id = $scope._Layer.params.schema[0].datasourceID;
             $scope.ReadOnlyDataSourceSelector = true;
-            // $scope.getDatasetsForDts(); // ??? This function doesn't exist. Is it supposed to be the same as getDatasetsForThisDts() ?
         }
         $('#sqlModal').modal('show');
     };

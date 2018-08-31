@@ -277,8 +277,12 @@ function update (req, done) {
 
 function remove (req, done) {
     if (!req.params.id) {
-        done({result: 0, msg: "'id' is required."});
-        return;
+        if (req.body.id) {
+            req.params.id = req.body.id;
+        } else {
+            done({result: 0, msg: "'id' is required."});
+            return;
+        }
     }
 
     var find = generateFindFields(req, req.params.id);
