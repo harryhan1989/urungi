@@ -1,11 +1,13 @@
 /* global XLSX: false, Blob: false, datenum: false */
 
-app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2) {
-    /*
-    *   the report object
-    */
-
+app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2, FileSaver) {
     this.Report = function (data, layerID) {
+        /*
+        *   the report object
+        * This constructor serves to validate the report object, make sure no fields are missing, and set a central standard for the report object structure
+        * Pass an object as the data argument to copy that object into a clean report object
+        * Pass no argument to create a new report object
+        */
         if (data) {
             this.draft = data.draft || true;
             this.badgeStatus = data.badgeStatus || 0;
@@ -392,10 +394,11 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2)
         return layers;
     };
 
-    /*
-    * Fetches all of the data associated to the report's query, and stores it in report.query.data
-    */
     this.fetchData = async function (query, params) {
+        /*
+        * Fetches all of the data associated to the report's query, and stores it in report.query.data
+        */
+
         if (query.columns.length === 0) {
             return {};
         }
@@ -600,6 +603,13 @@ app.service('reportModel', function (bsLoadingOverlayService, connection, uuid2)
     */
 
     this.Column = function (element) {
+        /*
+        *   Takes an element object as argument, and returns a column object
+        *
+        * Elements are created in the layer, and are all of the thigns you can fetch
+        * Each column corresponds to a single element, but contains additional information such as display parameters and aggregation
+        */
+
         var agg;
         var aggLabel = '';
 

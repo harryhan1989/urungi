@@ -40,7 +40,7 @@ app.service('Constants', function () {
                     if (data.result === 1 && data.msg && options.showMsg) {
                         noty({text: data.msg, timeout: 2000, type: 'success'});
                     } else if (data.result === 0 && data.msg && options.showMsg) {
-                        noty({text: data.msg, timeout: 2000, type: 'error'});
+                        noty({text: data.msg, timeout: 5000, type: 'error'});
                     }
 
                     return data;
@@ -84,7 +84,7 @@ app.service('Constants', function () {
                     if (data.result === 1 && data.msg) {
                         noty({text: data.msg, timeout: 2000, type: 'success'});
                     } else if (data.result === 0 && data.msg) {
-                        noty({text: data.msg, timeout: 2000, type: 'error'});
+                        noty({text: data.msg, timeout: 5000, type: 'error'});
                     }
 
                     return data;

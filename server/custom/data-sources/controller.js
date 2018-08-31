@@ -260,9 +260,9 @@ exports.getsqlQuerySchema = async function (req, res) {
     try {
         const connection = result.item.connection || result.item.params[0].connection;
         let data;
-        switch(result.item.type){
+        switch (result.item.type) {
         case 'POSTGRE': case 'MySQL': case 'ORACLE': case 'MSSQL':
-            
+
             data = {
                 type: result.item.type,
                 connection: {
@@ -290,7 +290,7 @@ exports.getsqlQuerySchema = async function (req, res) {
             result = { result: 1, isValid: true, schema: collection };
 
             serverResponse(req, res, 200, result);
-        
+
             break;
         case 'JDBC-ORACLE':
             var sql = require('../../core/legacy/sql');

@@ -23,38 +23,42 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     $scope.discardChangesModal = 'partials/modals/discardChangesModal.html';
     $scope.tabs = {selected: 'elements'};
 
-    $scope.duplicateOptions = {};
-    $scope.duplicateOptions.freeze = false;
-    $scope.duplicateOptions.header = 'Duplicate report';
-
-    $scope.navigation = {};
-    $scope.navigation.page = 1;
-    $scope.navigation.pager = {};
-
-    $scope.navigation.search = '';
-    $scope.navigation.filters = {};
-    $scope.navigation.filters.reportName = '';
-    $scope.navigation.filters.author = '';
-
-    $scope.navigation.sort = 'reportName';
-    $scope.navigation.sortTypes = {};
-    $scope.navigation.sortTypes.reportName = 1;
-    $scope.navigation.sortTypes.author = 1;
-    $scope.navigation.sortTypes.createdOn = 1;
+    /*
+    *   selectedReport is the report object which is currently being viewed/edited
+    *   This object should contain only what is saved in the database
+    */
+    $scope.selectedReport = {};
 
     $scope.gettingData = false;
     $scope.showSQL = false;
 
     $scope.rows = [];
+
+    // Each report uses a unique layer
+    $scope.selectedReport.selectedLayerID = undefined;
+
     $scope.layers = [];
-    $scope.mode = 'preview';
+    // We don't need the layers here, we just fetch them so we can get the rootItem
+
+    $scope.mode = 'view';
+    /*
+    *   The different modes are
+    * view
+    * new
+    * edit
+    * add - for creating a report from a dashboard
+    */
+
     $scope.isForDash = false;
     $scope.hasChanges = false;
 
+    // The number of lines to fetch
     $scope.selectedRecordLimit = { value: 500 };
 
+    // Contains all of the elements made available by the layer
     $scope.rootItem = {};
 
+    // Style
     $scope.textAlign = widgetsCommon.textAlign;
     $scope.fontSizes = widgetsCommon.fontSizes;
     $scope.fontWeights = widgetsCommon.fontWeights;
@@ -65,13 +69,6 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     /*
     *   Initialisation
     */
-
-    $scope.initReportList = async function () {
-        $scope.navigation.page = 1;
-        await $scope.getReports();
-        $scope.$digest();
-        $scope.mode = 'list';
-    };
 
     $scope.initReportView = async function () {
         $scope.selectedReport = await reportModel.getReport($routeParams.reportID, false);
@@ -108,6 +105,14 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         await $scope.refresh();
     };
 
+    /*
+    *   Note - report editing from dashboard
+    * The report editor is accessible from the dashboard editor
+    * In the code, this is done by including the report edit template in the dashbiard edit template
+    * reportCtrl is then the controller of that template, and the $scope inherits from the dashboard $scope
+    * Communication between the report and dashboard interface is done through events and through the service reportService
+    */
+
     $scope.$on('newReportForDash', function (event, args) {
         $scope.mode = 'add';
         $scope.isForDash = true;
@@ -133,42 +138,12 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         $scope.rootItem = $scope.layers[0].rootItem;
     };
 
-    $scope.getReports = async function (page, search, fields) {
-        var params = {};
-
-        if (!params.page) {
-            params.page = $scope.navigation.page || 1;
-        }
-
-        if (!params.search) {
-            params.search = $scope.navigation.search || '';
-        }
-
-        if (!params.sort && $scope.navigation.sort) {
-            params.sort = $scope.navigation.sort;
-        }
-
-        if (params.sort && !params.sortType) {
-            params.sortType = $scope.navigation.sortTypes[params.sort] || '';
-        }
-
-        if (!params.filters) {
-            params.filters = $scope.navigation.filters || undefined;
-        }
-
-        for (const f of ['reportName', 'author']) {
-            if (!params.filters[f]) {
-                delete params.filters[f];
-            }
-        }
-
-        const data = await connection.get('/api/reports/find-all', params);
-        $scope.reports = data.items;
-        // $scope.items = data.items;
-        $scope.navigation.page = data.page;
-        $scope.navigation.pages = data.pages;
-        $scope.navigation.pager = PagerService.GetPager($scope.reports.length, data.page, 10, data.pages);
-    };
+    /*
+    *   Note - prompts
+    * Filters have the option to be set as "run time filters"
+    * There will then be fields to enter the values for these filters when viewing the report and dashboard
+    * These fields are called "prompts". They need to be handled separately from the report display, both in report view and dashboard view
+    */
 
     $scope.initPrompts = function () {
         $scope.prompts = {};
@@ -181,22 +156,6 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
                 }
                 prompt.criterion = {};
                 $scope.prompts[prompt.id + prompt.filterType] = prompt;
-            }
-        }
-    };
-
-    $scope.goBack = function (confirm) {
-        if (confirm) {
-            $scope.dismissModal('#discardChangesModal');
-        }
-
-        if (!confirm && $scope.hasChanges) {
-            $('#discardChangesModal').modal('show');
-        } else {
-            if ($scope.isForDash) {
-                $scope.$emit('closeEditor');
-            } else {
-                $location.path('/reports');
             }
         }
     };
@@ -216,6 +175,10 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
             filterCriteria: filterCriteria
         });
     };
+
+    /*
+    *   A lot of the getters below are probably useless, but were left just to be sure not to break anything
+    */
 
     $scope.getPrompts = function () {
         return $scope.prompts && Object.values($scope.prompts);
@@ -251,8 +214,6 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
         $timeout(function () { $scope.showIntro(); }, 1000);
     }
 
-    $scope.duplicateOptions.duplicate = $scope.duplicateReport;
-
     $scope.changeLayer = function (selectedLayerID) {
         $scope.selectedReport.selectedLayerID = selectedLayerID;
         $scope.selectedReport.query.selectedLayerID = selectedLayerID;
@@ -283,6 +244,22 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     *   Modals and navigation buttons
     */
 
+    $scope.goBack = function (confirm) {
+        if (confirm) {
+            $scope.dismissModal('#discardChangesModal');
+        }
+
+        if (!confirm && $scope.hasChanges) {
+            $('#discardChangesModal').modal('show');
+        } else {
+            if ($scope.isForDash) {
+                $scope.$emit('closeEditor');
+            } else {
+                $location.path('/reports');
+            }
+        }
+    };
+
     $scope.reportName = function () {
         if ($scope.mode === 'add') {
             $('#theReportNameModal').modal('show');
@@ -293,6 +270,8 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
 
     $scope.reportNameSave = async function () {
         $scope.selectedReport.generateQuery();
+        // the query is generated before saving the report
+        // This way, the report in the database has a query object which is ready for use
 
         await reportModel.saveAsReport($scope.selectedReport, $scope.mode);
 
@@ -363,6 +342,14 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     */
 
     $scope.refresh = async function () {
+        /*
+        *   The general global refresh function, which re-calculates and re-fetches everything
+        *
+        * For now, this function is only executed on initialisation and when the "refresh" button is pressed
+        * It's possible to add it after some changes, or to trigger it automatically in some situations
+        * This would make the report edition more fluid, but more costly in terms of database access
+        */
+
         $scope.selectedReport.generateQuery();
 
         if (['chart-line', 'chart-donut', 'chart-pie', 'gauge'].indexOf($scope.selectedReport.reportType) >= 0) {
@@ -410,6 +397,8 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.onDropField = function (newItem, role, forbidAggregation) {
+        // A field is added to one of the the query-building drop areas
+
         $scope.sql = undefined;
         $scope.hasChanges = true;
 
@@ -525,6 +514,9 @@ app.controller('reportCtrl', function ($scope, connection, $compile, reportServi
     };
 
     $scope.isUsable = function (item) {
+        // Answer whether an element can be added to the report
+        // Elements which can't be joined to the currently used elements can't be used
+
         return $scope.selectedReport &&
             item.component !== -1 &&
             ($scope.selectedReport.properties.connectedComponent === undefined || // connectedComponent can be 0, which is why we can't just test it's truthyness
