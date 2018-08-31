@@ -6,13 +6,12 @@ and others, see [Supported databases](#supported-databases)
 
 ## Supported databases
 
-- MongoDB
 - PostgreSQL
 - MySQL
 - MS SQL Server
 - Oracle
-- Google Big Query
 
+Google Big Query might be supported, but to be honest we haven't tried it recently and it's probably broken.
 
 ## Requirements
 
@@ -20,10 +19,6 @@ and others, see [Supported databases](#supported-databases)
 - [npm](https://www.npmjs.com)
 - [bower](http://bower.io)
 - [MongoDB](https://www.mongodb.org)
-
-MongoDB is used to store Urungi metadata, you have to install it even if you are
-not going to explore MondoDB data.
-
 
 ## Installation
 

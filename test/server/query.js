@@ -307,37 +307,44 @@ const testData = [
             {
                 'id': 'oudh7khs-54fdt12-s',
                 'title': 'Steven\'s Lion',
-                'publishDate': new Date(2014, 1, 27)
+                'publishDate': new Date(2014, 1, 27),
+                'episodeNumber': 10
             },
             {
                 'id': 'oijs7g2-dgc09-qjds',
                 'title': 'Giant Woman',
-                'publishDate': new Date(2014, 2, 24)
+                'publishDate': new Date(2014, 2, 24),
+                'episodeNumber': 12
             },
             {
                 'id': 'ipjqd56-ftfls2-4',
                 'title': 'Jail Break',
-                'publishDate': new Date(2015, 4, 12)
+                'publishDate': new Date(2015, 4, 12),
+                'episodeNumber': 52
             },
             {
                 'id': 'ujsd-2-sijd67jisql',
                 'title': 'Full Disclosure',
-                'publishDate': new Date(2015, 4, 13)
+                'publishDate': new Date(2015, 4, 13),
+                'episodeNumber': 53
             },
             {
                 'id': 'okpsd123-hidsi77-d',
                 'title': 'Sworn to the sword',
-                'publishDate': new Date(2015, 6, 15)
+                'publishDate': new Date(2015, 6, 15),
+                'episodeNumber': 58
             },
             {
                 'id': 'nfsujis7_dyiq-2',
                 'title': 'It could\'ve been great',
-                'publishDate': new Date(2016, 1, 6)
+                'publishDate': new Date(2016, 1, 6),
+                'episodeNumber': 76
             },
             {
                 'id': 'ojoqjdo0099098',
                 'title': 'The question',
-                'publishDate': new Date(2018, 6, 4)
+                'publishDate': new Date(2018, 6, 4),
+                'episodeNumber': 149
             }
         ]
     },

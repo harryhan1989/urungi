@@ -1,6 +1,14 @@
 var knex = require('knex');
 
 var Db = function (datasource, warnings) {
+    /*
+    *   This object represents an opened connection to a SQL database
+    *
+    * For one thing, it acts as a wrapper around the knex object.
+    * It also provides all of the database queries we need to find collections and collection schemas.
+    *
+    */
+
     if (warnings) {
         this.warnings = warnings;
     } else {
@@ -157,6 +165,13 @@ Db.prototype.executeRawQuery = async function (sqlQuery) {
 };
 
 Db.prototype.close = async function () {
+    /*
+    *   knex is supposed to terminate itself when the server ends, however, this does not seeem very reliable.
+    * In particular, the testsuite does not end if knex is not manually terminated.
+    *
+    * Therefore, don't forget to call the close() method once you're done using your db object.
+    */
+
     await this.knex.destroy();
 };
 
