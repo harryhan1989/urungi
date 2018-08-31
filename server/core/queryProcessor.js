@@ -281,16 +281,22 @@ function joinCollections (collectionRef, layer, currentID, previousID, safetyCou
 
     for (const join of layer.params.joins) {
         var joinedID = null;
-        var joinElementID;
+        var joinElement;
 
         if (join.sourceCollectionID === currentID) {
             joinedID = join.targetCollectionID;
-            joinElementID = join.targetElementID;
+            joinElement = {
+                elementID: join.targetElementID,
+                elementName: join.targetElementName
+            };
         }
 
         if (join.targetCollectionID === currentID) {
             joinedID = join.sourceCollectionID;
-            joinElementID = join.sourceElementID;
+            joinElement = {
+                elementID: join.sourceElementID,
+                elementName: join.sourceElementName
+            };
         }
 
         if (joinedID && joinedID !== previousID) {
@@ -299,11 +305,6 @@ function joinCollections (collectionRef, layer, currentID, previousID, safetyCou
             if (result.shouldJoin) {
                 shouldJoin = true;
                 result.node.parentJoin = join;
-                const joinElement = findElement(layer.objects, joinElementID);
-                if (!joinElement) {
-                    warnings.push({ msg: 'Unable to join a table due to missing join field' });
-                    continue;
-                }
                 result.node.fetchFields.push(joinElement);
                 node.joins.push(result.node);
             }
