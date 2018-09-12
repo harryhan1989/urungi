@@ -90,18 +90,54 @@ app.service('ioModel', function (connection) {
             return;
         }
 
+        function stripDatabaseName (collectionName) {
+            return collectionName.replace(/^.+\./, '');
+        }
+
         function exploreElements (elements) {
             for (const el of elements) {
-                if (el.datasourceID) {
-                    el.datasourceID = datasourceRef[el.datasourceID];
-                }
                 if (el.elements) {
                     exploreElements(el.elements);
+                    return;
                 }
+
+                el.datasourceID = datasourceRef[el.datasourceID];
+                el.collectionName = stripDatabaseName(el.collectionName);
             }
         }
 
         exploreElements(layer.objects);
+
+        if (layer.customElements) {
+            for (const element of layer.customElements) {
+                if (element.arguments) {
+                    for (const arg of element.arguments) {
+                        arg.collectionName = stripDatabaseName(arg.collectionName);
+                    }
+                }
+                if (element.tempArguments) {
+                    for (const arg of element.tempArguments) {
+                        arg.collectionName = stripDatabaseName(arg.collectionName);
+                    }
+                }
+            }
+        }
+
+        if (layer.params.joins) {
+            for (const join of layer.params.joins) {
+                join.targetCollectionName = stripDatabaseName(join.targetCollectionName);
+                join.sourceCollectionName = stripDatabaseName(join.sourceCollectionName);
+            }
+        }
+
+        if (layer.params.schema) {
+            for (const schema of layer.params.schema) {
+                for (const element of schema.elements) {
+                    element.collectionName = stripDatabaseName(element.collectionName);
+                }
+                schema.collectionName = stripDatabaseName(schema.collectionName);
+            }
+        }
 
         for (const col of layer.params.schema) {
             col.datasourceID = datasourceRef[col.datasourceID];
